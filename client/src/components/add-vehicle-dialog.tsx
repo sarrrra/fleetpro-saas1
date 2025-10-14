@@ -40,14 +40,13 @@ export function AddVehicleDialog() {
     mutationFn: async (data: any) => {
       await apiRequest("POST", "/api/vehicles", data);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       toast({
         title: "Véhicule ajouté",
         description: "Le véhicule a été ajouté avec succès",
       });
-      setOpen(false);
       setFormData({
         immatriculation: "",
         marque: "",
@@ -57,6 +56,7 @@ export function AddVehicleDialog() {
         kilometrage: "",
         heuresTravail: "",
       });
+      setOpen(false);
     },
     onError: () => {
       toast({
