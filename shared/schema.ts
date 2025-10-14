@@ -150,6 +150,31 @@ export const invoices = pgTable("invoices", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Organization Settings
+export const organizationSettings = pgTable("organization_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id).notNull().unique(),
+  // Informations légales
+  registreCommerce: text("registre_commerce"),
+  nis: text("nis"),
+  nif: text("nif"),
+  articleImposition: text("article_imposition"),
+  // Informations entreprise
+  nomComplet: text("nom_complet"),
+  adresseComplete: text("adresse_complete"),
+  ville: text("ville"),
+  codePostal: text("code_postal"),
+  pays: text("pays").default("Algérie"),
+  telephone: text("telephone"),
+  email: text("email"),
+  siteWeb: text("site_web"),
+  // Personnalisation
+  logo: text("logo"), // URL ou base64
+  couleurPrimaire: text("couleur_primaire").default("#2563eb"),
+  couleurSecondaire: text("couleur_secondaire").default("#64748b"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Insert Schemas
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({ id: true, createdAt: true });
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
@@ -160,6 +185,7 @@ export const insertFuelRecordSchema = createInsertSchema(fuelRecords).omit({ id:
 export const insertMaintenanceRecordSchema = createInsertSchema(maintenanceRecords).omit({ id: true, createdAt: true });
 export const insertTransactionSchema = createInsertSchema(transactions).omit({ id: true, createdAt: true });
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true, createdAt: true });
+export const insertOrganizationSettingsSchema = createInsertSchema(organizationSettings).omit({ id: true, updatedAt: true });
 
 // Types
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
@@ -188,3 +214,6 @@ export type Transaction = typeof transactions.$inferSelect;
 
 export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 export type Invoice = typeof invoices.$inferSelect;
+
+export type InsertOrganizationSettings = z.infer<typeof insertOrganizationSettingsSchema>;
+export type OrganizationSettings = typeof organizationSettings.$inferSelect;
