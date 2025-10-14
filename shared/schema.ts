@@ -1,18 +1,179 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, decimal, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
+// Enums
+export const userRoleEnum = pgEnum("user_role", ["super_admin", "admin_entreprise", "gestionnaire", "chauffeur"]);
+export const vehicleStatusEnum = pgEnum("vehicle_status", ["disponible", "en_location", "en_maintenance", "hors_service"]);
+export const driverStatusEnum = pgEnum("driver_status", ["actif", "inactif", "conge"]);
+export const maintenanceUrgencyEnum = pgEnum("maintenance_urgency", ["urgent", "soon", "scheduled"]);
+export const transactionTypeEnum = pgEnum("transaction_type", ["recette", "depense"]);
+
+// Organizations (Tenants)
+export const organizations = pgTable("organizations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  nom: text("nom").notNull(),
+  email: text("email").notNull(),
+  telephone: text("telephone"),
+  adresse: text("adresse"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+// Users
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  replitAuthId: text("replit_auth_id").unique(),
+  organizationId: varchar("organization_id").references(() => organizations.id).notNull(),
+  nom: text("nom").notNull(),
+  prenom: text("prenom").notNull(),
+  email: text("email").notNull().unique(),
+  telephone: text("telephone"),
+  role: userRoleEnum("role").notNull().default("gestionnaire"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// Vehicles
+export const vehicles = pgTable("vehicles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id).notNull(),
+  immatriculation: text("immatriculation").notNull(),
+  marque: text("marque").notNull(),
+  modele: text("modele").notNull(),
+  type: text("type").notNull(), // voiture, utilitaire, camion, bus, engin
+  annee: integer("annee"),
+  kilometrage: integer("kilometrage").default(0).notNull(),
+  heuresTravail: integer("heures_travail").default(0),
+  status: vehicleStatusEnum("status").default("disponible").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Drivers
+export const drivers = pgTable("drivers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id).notNull(),
+  userId: varchar("user_id").references(() => users.id),
+  nom: text("nom").notNull(),
+  prenom: text("prenom").notNull(),
+  telephone: text("telephone").notNull(),
+  email: text("email"),
+  numeroPermis: text("numero_permis"),
+  dateExpirationPermis: timestamp("date_expiration_permis"),
+  vehiculeAssigneId: varchar("vehicule_assigne_id").references(() => vehicles.id),
+  status: driverStatusEnum("status").default("actif").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Clients
+export const clients = pgTable("clients", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id).notNull(),
+  nom: text("nom").notNull(),
+  email: text("email"),
+  telephone: text("telephone").notNull(),
+  adresse: text("adresse"),
+  entreprise: text("entreprise"),
+  solde: decimal("solde", { precision: 10, scale: 2 }).default("0").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Fuel Records
+export const fuelRecords = pgTable("fuel_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id).notNull(),
+  vehiculeId: varchar("vehicule_id").references(() => vehicles.id).notNull(),
+  chauffeurId: varchar("chauffeur_id").references(() => drivers.id),
+  date: timestamp("date").defaultNow().notNull(),
+  quantite: decimal("quantite", { precision: 10, scale: 2 }).notNull(),
+  coutUnitaire: decimal("cout_unitaire", { precision: 10, scale: 2 }).notNull(),
+  coutTotal: decimal("cout_total", { precision: 10, scale: 2 }).notNull(),
+  kilometrage: integer("kilometrage").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Maintenance Records
+export const maintenanceRecords = pgTable("maintenance_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id).notNull(),
+  vehiculeId: varchar("vehicule_id").references(() => vehicles.id).notNull(),
+  type: text("type").notNull(), // vidange, filtres, pneus, etc.
+  description: text("description"),
+  datePrevu: timestamp("date_prevu"),
+  dateRealise: timestamp("date_realise"),
+  kilometragePrevu: integer("kilometrage_prevu"),
+  kilometrageRealise: integer("kilometrage_realise"),
+  cout: decimal("cout", { precision: 10, scale: 2 }),
+  urgency: maintenanceUrgencyEnum("urgency").default("scheduled").notNull(),
+  complete: boolean("complete").default(false).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Transactions (Treasury)
+export const transactions = pgTable("transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id).notNull(),
+  type: transactionTypeEnum("type").notNull(),
+  montant: decimal("montant", { precision: 10, scale: 2 }).notNull(),
+  date: timestamp("date").defaultNow().notNull(),
+  categorie: text("categorie").notNull(),
+  description: text("description"),
+  vehiculeId: varchar("vehicule_id").references(() => vehicles.id),
+  clientId: varchar("client_id").references(() => clients.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Invoices
+export const invoices = pgTable("invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id).notNull(),
+  clientId: varchar("client_id").references(() => clients.id).notNull(),
+  numeroFacture: text("numero_facture").notNull(),
+  date: timestamp("date").defaultNow().notNull(),
+  dateEcheance: timestamp("date_echeance"),
+  montantTotal: decimal("montant_total", { precision: 10, scale: 2 }).notNull(),
+  montantPaye: decimal("montant_paye", { precision: 10, scale: 2 }).default("0").notNull(),
+  status: text("status").default("impayee").notNull(), // impayee, payee_partiellement, payee
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Insert Schemas
+export const insertOrganizationSchema = createInsertSchema(organizations).omit({ id: true, createdAt: true });
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
+export const insertVehicleSchema = createInsertSchema(vehicles).omit({ id: true, createdAt: true });
+export const insertDriverSchema = createInsertSchema(drivers).omit({ id: true, createdAt: true });
+export const insertClientSchema = createInsertSchema(clients).omit({ id: true, createdAt: true });
+export const insertFuelRecordSchema = createInsertSchema(fuelRecords).omit({ id: true, createdAt: true });
+export const insertMaintenanceRecordSchema = createInsertSchema(maintenanceRecords).omit({ id: true, createdAt: true });
+export const insertTransactionSchema = createInsertSchema(transactions).omit({ id: true, createdAt: true });
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true, createdAt: true });
+
+// Types
+export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
+export type Organization = typeof organizations.$inferSelect;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
+export type Vehicle = typeof vehicles.$inferSelect;
+
+export type InsertDriver = z.infer<typeof insertDriverSchema>;
+export type Driver = typeof drivers.$inferSelect;
+
+export type InsertClient = z.infer<typeof insertClientSchema>;
+export type Client = typeof clients.$inferSelect;
+
+export type InsertFuelRecord = z.infer<typeof insertFuelRecordSchema>;
+export type FuelRecord = typeof fuelRecords.$inferSelect;
+
+export type InsertMaintenanceRecord = z.infer<typeof insertMaintenanceRecordSchema>;
+export type MaintenanceRecord = typeof maintenanceRecords.$inferSelect;
+
+export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
+export type Transaction = typeof transactions.$inferSelect;
+
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+export type Invoice = typeof invoices.$inferSelect;
