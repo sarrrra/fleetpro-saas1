@@ -377,6 +377,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Organization settings routes
+  app.get("/api/settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const replitAuthId = req.user.claims.sub;
+      const user = await storage.getUserByReplitAuthId(replitAuthId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      
+      const settings = await storage.getOrganizationSettings(user.organizationId);
+      res.json(settings || {});
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ message: "Failed to fetch settings" });
+    }
+  });
+
+  app.put("/api/settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const replitAuthId = req.user.claims.sub;
+      const user = await storage.getUserByReplitAuthId(replitAuthId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const settings = await storage.upsertOrganizationSettings({
+        ...req.body,
+        organizationId: user.organizationId,
+      });
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating settings:", error);
+      res.status(400).json({ message: "Failed to update settings" });
+    }
+  });
+
+  // User management routes
+  app.get("/api/users", isAuthenticated, async (req: any, res) => {
+    try {
+      const replitAuthId = req.user.claims.sub;
+      const user = await storage.getUserByReplitAuthId(replitAuthId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      
+      const users = await storage.getUsersByOrganization(user.organizationId);
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.patch("/api/users/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const replitAuthId = req.user.claims.sub;
+      const user = await storage.getUserByReplitAuthId(replitAuthId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      // Only allow role updates for now
+      const updatedUser = await storage.updateUserRole(req.params.id, user.organizationId, req.body.role);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(400).json({ message: "Failed to update user" });
+    }
+  });
+
+  app.delete("/api/users/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const replitAuthId = req.user.claims.sub;
+      const user = await storage.getUserByReplitAuthId(replitAuthId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      await storage.deleteUser(req.params.id, user.organizationId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(400).json({ message: "Failed to delete user" });
+    }
+  });
+
   // Dashboard stats
   app.get("/api/dashboard/stats", isAuthenticated, async (req: any, res) => {
     try {

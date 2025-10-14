@@ -8,6 +8,7 @@ import {
   maintenanceRecords,
   transactions,
   invoices,
+  organizationSettings,
   type Organization,
   type User,
   type InsertUser,
@@ -25,6 +26,8 @@ import {
   type InsertTransaction,
   type Invoice,
   type InsertInvoice,
+  type OrganizationSettings,
+  type InsertOrganizationSettings,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -86,6 +89,15 @@ export interface IStorage {
   getInvoicesByClient(clientId: string, organizationId: string): Promise<Invoice[]>;
   createInvoice(invoice: InsertInvoice): Promise<Invoice>;
   updateInvoice(id: string, organizationId: string, data: Partial<InsertInvoice>): Promise<Invoice>;
+  
+  // Organization settings operations
+  getOrganizationSettings(organizationId: string): Promise<OrganizationSettings | undefined>;
+  upsertOrganizationSettings(settings: InsertOrganizationSettings): Promise<OrganizationSettings>;
+  
+  // User management operations
+  getUsersByOrganization(organizationId: string): Promise<User[]>;
+  updateUserRole(userId: string, organizationId: string, role: string): Promise<User>;
+  deleteUser(userId: string, organizationId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -299,6 +311,46 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(invoices.id, id), eq(invoices.organizationId, organizationId)))
       .returning();
     return invoice;
+  }
+
+  // Organization settings operations
+  async getOrganizationSettings(organizationId: string): Promise<OrganizationSettings | undefined> {
+    const [settings] = await db.select().from(organizationSettings).where(eq(organizationSettings.organizationId, organizationId));
+    return settings;
+  }
+
+  async upsertOrganizationSettings(settings: InsertOrganizationSettings): Promise<OrganizationSettings> {
+    const existing = await this.getOrganizationSettings(settings.organizationId);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(organizationSettings)
+        .set({ ...settings, updatedAt: new Date() })
+        .where(eq(organizationSettings.organizationId, settings.organizationId))
+        .returning();
+      return updated;
+    }
+
+    const [newSettings] = await db.insert(organizationSettings).values(settings).returning();
+    return newSettings;
+  }
+
+  // User management operations
+  async getUsersByOrganization(organizationId: string): Promise<User[]> {
+    return db.select().from(users).where(eq(users.organizationId, organizationId)).orderBy(users.nom);
+  }
+
+  async updateUserRole(userId: string, organizationId: string, role: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ role: role as any })
+      .where(and(eq(users.id, userId), eq(users.organizationId, organizationId)))
+      .returning();
+    return user;
+  }
+
+  async deleteUser(userId: string, organizationId: string): Promise<void> {
+    await db.delete(users).where(and(eq(users.id, userId), eq(users.organizationId, organizationId)));
   }
 }
 
