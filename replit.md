@@ -31,7 +31,8 @@ L'application utilise une architecture multi-tenant avec isolation complète des
 7. **maintenance_records** - Planification et suivi d'entretien
 8. **transactions** - Transactions financières (recettes/dépenses)
 9. **invoices** - Factures clients
-10. **sessions** - Sessions utilisateur (Replit Auth)
+10. **organization_settings** - Paramètres et personnalisation des organisations
+11. **sessions** - Sessions utilisateur (Replit Auth)
 
 ### Isolation des Données
 Chaque table (sauf `users` et `organizations`) contient un champ `organizationId` pour garantir l'isolation des données entre tenants.
@@ -59,14 +60,37 @@ Chaque table (sauf `users` et `organizations`) contient un champ `organizationId
 - ✅ Types: voiture, utilitaire, camion, bus, engin
 
 ### Gestion des Chauffeurs
-- ✅ Page de liste (structure en place)
-- 🔄 CRUD complet à finaliser
+- ✅ CRUD complet avec assignation véhicule
+
+### Gestion des Clients
+- ✅ CRUD complet avec suivi de solde
+
+### Suivi Carburant
+- ✅ Enregistrements avec statistiques (coût total, quantité, prix moyen)
+
+### Planification Maintenance
+- ✅ Création avec urgence (urgent/bientôt/programmé)
+- ✅ Suivi par kilométrage/heures
+
+### Trésorerie
+- ✅ Transactions recettes/dépenses
+- ✅ Catégories et balance
+
+### Facturation
+- ✅ Factures avec statuts (impayée, payée partiellement, payée)
+- ✅ Échéances et suivi paiements
+
+### Configuration
+- ✅ **Paramètres entreprise** - Registre commerce, NIS, NIF, article imposition, adresse
+- ✅ **Administration** - Gestion utilisateurs et rôles
+- ✅ **Personnalisation** - Couleurs thème, logo entreprise
 
 ### Pages Principales
 - ✅ Landing page (non authentifié)
 - ✅ Dashboard (authentifié)
-- ✅ Véhicules (authentifié)
-- ✅ Chauffeurs (authentifié)
+- ✅ Véhicules, Chauffeurs, Clients
+- ✅ Carburant, Maintenance, Trésorerie, Factures
+- ✅ Paramètres, Administration, Personnalisation
 
 ## API Routes
 
@@ -91,26 +115,35 @@ Chaque table (sauf `users` et `organizations`) contient un champ `organizationId
 ### Dashboard
 - `GET /api/dashboard/stats` - Statistiques du dashboard
 
+### Configuration
+- `GET /api/settings` - Récupérer paramètres organisation
+- `PUT /api/settings` - Modifier paramètres organisation
+- `GET /api/users` - Liste utilisateurs organisation
+- `PATCH /api/users/:id` - Modifier rôle utilisateur
+- `DELETE /api/users/:id` - Supprimer utilisateur
+
 ### Autres endpoints
-- Clients, Carburant, Maintenance, Transactions, Factures (implémentés côté backend)
+- Clients, Carburant, Maintenance, Transactions, Factures (tous implémentés)
 
 ## Changements Récents (Octobre 2024)
 
-### Dernière Session
-1. ✅ Implémentation complète de Replit Auth avec multi-tenant
-2. ✅ Connexion frontend-backend avec données réelles
-3. ✅ Dashboard fonctionnel avec stats en temps réel
-4. ✅ Page Véhicules avec CRUD complet
-5. ✅ Landing page pour utilisateurs non authentifiés
-6. ✅ Gestion d'erreurs 401 avec redirection
+### Dernière Session (Octobre 2024)
+1. ✅ Tous les 7 modules opérationnels complétés
+2. ✅ Module Configuration ajouté (Paramètres, Administration, Personnalisation)
+3. ✅ Tests end-to-end Playwright validés pour tous les modules
+4. ✅ Corrections bugs : routes /entretien, validation dates, SelectItem vides
+5. ✅ Table organization_settings créée avec infos légales et personnalisation
+
+### Modules Complets
+- ✅ Véhicules, Chauffeurs, Clients (CRUD complet)
+- ✅ Carburant, Maintenance, Trésorerie, Factures (fonctionnels)
+- ✅ Configuration : Paramètres entreprise, Administration utilisateurs, Personnalisation thème
 
 ## Prochaines Étapes
-1. 🔄 Tests end-to-end avec Playwright
-2. 🔄 Finaliser CRUD chauffeurs
-3. 🔄 Implémenter gestion clients
-4. 🔄 Implémenter suivi carburant
-5. 🔄 Implémenter planification maintenance
-6. 🔄 Implémenter trésorerie et facturation
+1. 🔄 Optimisations UX (modals, toasts)
+2. 🔄 Rapports et exports PDF
+3. 🔄 Notifications et alertes
+4. 🔄 Dashboard analytics avancé
 
 ## Navigation de l'Application
 
