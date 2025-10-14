@@ -1,61 +1,85 @@
 import { useState } from "react";
 import { DriverTable } from "@/components/driver-table";
+import { AddDriverDialog } from "@/components/add-driver-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Plus } from "lucide-react";
-
-// TODO: Remove mock data when connecting to backend
-const mockDrivers = [
-  {
-    id: "1",
-    nom: "Dubois",
-    prenom: "Jean",
-    telephone: "06 12 34 56 78",
-    vehiculeAssigne: "AB-123-CD",
-    status: "actif" as const,
-  },
-  {
-    id: "2",
-    nom: "Martin",
-    prenom: "Sophie",
-    telephone: "06 98 76 54 32",
-    vehiculeAssigne: "EF-456-GH",
-    status: "actif" as const,
-  },
-  {
-    id: "3",
-    nom: "Bernard",
-    prenom: "Pierre",
-    telephone: "06 11 22 33 44",
-    status: "conge" as const,
-  },
-  {
-    id: "4",
-    nom: "Petit",
-    prenom: "Marie",
-    telephone: "06 55 66 77 88",
-    vehiculeAssigne: "IJ-789-KL",
-    status: "actif" as const,
-  },
-  {
-    id: "5",
-    nom: "Leroy",
-    prenom: "Paul",
-    telephone: "06 33 44 55 66",
-    status: "inactif" as const,
-  },
-];
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { Driver, Vehicle } from "@shared/schema";
 
 export default function Chauffeurs() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("tous");
+  const { toast } = useToast();
 
-  const filteredDrivers = mockDrivers.filter((driver) => {
-    const fullName = `${driver.prenom} ${driver.nom}`.toLowerCase();
-    return (
-      fullName.includes(searchTerm.toLowerCase()) ||
-      driver.telephone.includes(searchTerm)
-    );
+  const { data: drivers = [], isLoading } = useQuery<Driver[]>({
+    queryKey: ["/api/drivers"],
   });
+
+  const { data: vehicles = [] } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles"],
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/drivers/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/drivers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      toast({
+        title: "Chauffeur supprimé",
+        description: "Le chauffeur a été supprimé avec succès",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer le chauffeur",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const filteredDrivers = drivers.filter((driver) => {
+    const fullName = `${driver.prenom} ${driver.nom}`.toLowerCase();
+    const matchesSearch = 
+      fullName.includes(searchTerm.toLowerCase()) ||
+      driver.telephone.includes(searchTerm);
+    
+    const matchesStatus = statusFilter === "tous" || driver.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  // Créer une map des véhicules pour afficher l'immatriculation
+  const vehicleMap = vehicles.reduce((acc, vehicle) => {
+    acc[vehicle.id] = vehicle.immatriculation;
+    return acc;
+  }, {} as Record<string, string>);
+
+  // Transformer les données pour le DriverTable
+  const driversWithVehicles = filteredDrivers.map((driver) => ({
+    ...driver,
+    vehiculeAssigne: driver.vehiculeAssigneId ? vehicleMap[driver.vehiculeAssigneId] : undefined,
+  }));
+
+  const handleDelete = (id: string) => {
+    if (confirm("Êtes-vous sûr de vouloir supprimer ce chauffeur ?")) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">Chargement...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -63,31 +87,48 @@ export default function Chauffeurs() {
         <div>
           <h1 className="text-3xl font-bold">Gestion des Chauffeurs</h1>
           <p className="text-muted-foreground">
-            {mockDrivers.length} chauffeurs enregistrés
+            {drivers.length} chauffeurs enregistrés
           </p>
         </div>
-        <Button data-testid="button-add-driver">
-          <Plus className="h-4 w-4 mr-2" />
-          Nouveau Chauffeur
-        </Button>
-      </div>
-
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Rechercher par nom ou téléphone..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-9"
-          data-testid="input-search-drivers"
+        <AddDriverDialog
+          trigger={
+            <Button data-testid="button-add-driver">
+              <Plus className="h-4 w-4 mr-2" />
+              Nouveau Chauffeur
+            </Button>
+          }
         />
       </div>
 
+      <div className="flex gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher par nom ou téléphone..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+            data-testid="input-search-drivers"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[200px]" data-testid="select-filter-status">
+            <SelectValue placeholder="Filtrer par statut" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="tous">Tous les statuts</SelectItem>
+            <SelectItem value="actif">Actif</SelectItem>
+            <SelectItem value="inactif">Inactif</SelectItem>
+            <SelectItem value="conge">En congé</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <DriverTable
-        drivers={filteredDrivers}
+        drivers={driversWithVehicles}
         onView={(id) => console.log('View driver', id)}
         onEdit={(id) => console.log('Edit driver', id)}
-        onDelete={(id) => console.log('Delete driver', id)}
+        onDelete={handleDelete}
       />
 
       {filteredDrivers.length === 0 && (
