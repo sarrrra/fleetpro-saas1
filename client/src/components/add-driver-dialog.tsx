@@ -175,7 +175,6 @@ export function AddDriverDialog({ trigger, open: controlledOpen, onOpenChange }:
                   <SelectValue placeholder="Sélectionner un véhicule" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucun véhicule</SelectItem>
                   {vehicles
                     .filter((v) => v.status === "disponible")
                     .map((vehicle) => (

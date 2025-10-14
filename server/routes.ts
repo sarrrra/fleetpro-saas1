@@ -241,10 +241,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUserByReplitAuthId(replitAuthId);
       if (!user) return res.status(404).json({ message: "User not found" });
 
-      const validatedData = insertFuelRecordSchema.parse({
+      const payload = {
         ...req.body,
         organizationId: user.organizationId,
-      });
+      };
+      
+      // Convert ISO string to Date object if present
+      if (payload.date) {
+        payload.date = new Date(payload.date);
+      }
+
+      const validatedData = insertFuelRecordSchema.parse(payload);
 
       const record = await storage.createFuelRecord(validatedData);
       res.json(record);

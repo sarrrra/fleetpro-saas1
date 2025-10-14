@@ -188,7 +188,6 @@ export function AddTransactionDialog({ trigger, open: controlledOpen, onOpenChan
                   <SelectValue placeholder="Aucun" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucun</SelectItem>
                   {vehicles.map((vehicle) => (
                     <SelectItem key={vehicle.id} value={vehicle.id}>
                       {vehicle.immatriculation} - {vehicle.marque} {vehicle.modele}
@@ -207,7 +206,6 @@ export function AddTransactionDialog({ trigger, open: controlledOpen, onOpenChan
                   <SelectValue placeholder="Aucun" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucun</SelectItem>
                   {clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
                       {client.nom}

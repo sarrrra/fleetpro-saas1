@@ -137,7 +137,6 @@ export function AddFuelRecordDialog({ trigger, open: controlledOpen, onOpenChang
                   <SelectValue placeholder="Sélectionner un chauffeur" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucun</SelectItem>
                   {drivers.map((driver) => (
                     <SelectItem key={driver.id} value={driver.id}>
                       {driver.prenom} {driver.nom}
