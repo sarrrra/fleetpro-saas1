@@ -16,6 +16,9 @@ import Carburant from "@/pages/carburant";
 import Maintenance from "@/pages/maintenance";
 import Tresorerie from "@/pages/tresorerie";
 import Factures from "@/pages/factures";
+import Parametres from "@/pages/parametres";
+import Administration from "@/pages/administration";
+import Personnalisation from "@/pages/personnalisation";
 import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 
@@ -47,6 +50,9 @@ function Router() {
           <Route path="/entretien" component={Maintenance} />
           <Route path="/tresorerie" component={Tresorerie} />
           <Route path="/factures" component={Factures} />
+          <Route path="/parametres" component={Parametres} />
+          <Route path="/administration" component={Administration} />
+          <Route path="/personnalisation" component={Personnalisation} />
         </>
       )}
       <Route component={NotFound} />

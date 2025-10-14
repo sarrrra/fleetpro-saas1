@@ -20,6 +20,8 @@ import {
   Wallet,
   FileText,
   Settings,
+  Shield,
+  Palette,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
@@ -110,10 +112,38 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild data-testid="link-sidebar-parametres">
+                <SidebarMenuButton
+                  asChild
+                  isActive={location === "/parametres"}
+                  data-testid="link-sidebar-parametres"
+                >
                   <Link href="/parametres">
                     <Settings className="h-4 w-4" />
                     <span>Paramètres</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location === "/administration"}
+                  data-testid="link-sidebar-administration"
+                >
+                  <Link href="/administration">
+                    <Shield className="h-4 w-4" />
+                    <span>Administration</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location === "/personnalisation"}
+                  data-testid="link-sidebar-personnalisation"
+                >
+                  <Link href="/personnalisation">
+                    <Palette className="h-4 w-4" />
+                    <span>Personnalisation</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
