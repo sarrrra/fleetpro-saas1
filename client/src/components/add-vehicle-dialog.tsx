@@ -19,28 +19,68 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export function AddVehicleDialog() {
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     immatriculation: "",
+    marque: "",
     modele: "",
     type: "",
+    annee: "",
     kilometrage: "",
     heuresTravail: "",
   });
 
+  const mutation = useMutation({
+    mutationFn: async (data: any) => {
+      await apiRequest("POST", "/api/vehicles", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      toast({
+        title: "Véhicule ajouté",
+        description: "Le véhicule a été ajouté avec succès",
+      });
+      setOpen(false);
+      setFormData({
+        immatriculation: "",
+        marque: "",
+        modele: "",
+        type: "",
+        annee: "",
+        kilometrage: "",
+        heuresTravail: "",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ajouter le véhicule",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Adding vehicle:", formData);
-    setOpen(false);
-    setFormData({
-      immatriculation: "",
-      modele: "",
-      type: "",
-      kilometrage: "",
-      heuresTravail: "",
-    });
+    
+    const vehicleData = {
+      immatriculation: formData.immatriculation,
+      marque: formData.marque,
+      modele: formData.modele,
+      type: formData.type,
+      annee: formData.annee ? parseInt(formData.annee) : undefined,
+      kilometrage: parseInt(formData.kilometrage),
+      heuresTravail: formData.heuresTravail ? parseInt(formData.heuresTravail) : undefined,
+    };
+
+    mutation.mutate(vehicleData);
   };
 
   return (
@@ -74,16 +114,42 @@ export function AddVehicleDialog() {
               />
             </div>
             <div className="grid gap-2">
+              <Label htmlFor="marque">Marque</Label>
+              <Input
+                id="marque"
+                placeholder="Renault"
+                value={formData.marque}
+                onChange={(e) =>
+                  setFormData({ ...formData, marque: e.target.value })
+                }
+                data-testid="input-marque"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
               <Label htmlFor="modele">Modèle</Label>
               <Input
                 id="modele"
-                placeholder="Renault Trafic"
+                placeholder="Trafic"
                 value={formData.modele}
                 onChange={(e) =>
                   setFormData({ ...formData, modele: e.target.value })
                 }
                 data-testid="input-modele"
                 required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="annee">Année (optionnel)</Label>
+              <Input
+                id="annee"
+                type="number"
+                placeholder="2022"
+                value={formData.annee}
+                onChange={(e) =>
+                  setFormData({ ...formData, annee: e.target.value })
+                }
+                data-testid="input-annee"
               />
             </div>
             <div className="grid gap-2">
@@ -139,8 +205,8 @@ export function AddVehicleDialog() {
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Annuler
             </Button>
-            <Button type="submit" data-testid="button-submit-vehicle">
-              Ajouter
+            <Button type="submit" data-testid="button-submit-vehicle" disabled={mutation.isPending}>
+              {mutation.isPending ? "Ajout..." : "Ajouter"}
             </Button>
           </DialogFooter>
         </form>

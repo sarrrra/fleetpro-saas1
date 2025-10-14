@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { VehicleCard } from "@/components/vehicle-card";
 import { AddVehicleDialog } from "@/components/add-vehicle-dialog";
 import { Input } from "@/components/ui/input";
@@ -10,70 +10,76 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-// TODO: Remove mock data when connecting to backend
-const mockVehicles = [
-  {
-    id: "1",
-    immatriculation: "AB-123-CD",
-    modele: "Renault Trafic",
-    type: "Utilitaire",
-    kilometrage: 45000,
-    status: "disponible" as const,
-  },
-  {
-    id: "2",
-    immatriculation: "EF-456-GH",
-    modele: "Mercedes Sprinter",
-    type: "Camion",
-    kilometrage: 120000,
-    status: "en_location" as const,
-  },
-  {
-    id: "3",
-    immatriculation: "IJ-789-KL",
-    modele: "Peugeot 308",
-    type: "Voiture",
-    kilometrage: 78000,
-    status: "en_maintenance" as const,
-  },
-  {
-    id: "4",
-    immatriculation: "MN-012-OP",
-    modele: "Citroën Berlingo",
-    type: "Utilitaire",
-    kilometrage: 92000,
-    status: "disponible" as const,
-  },
-  {
-    id: "5",
-    immatriculation: "QR-345-ST",
-    modele: "Ford Transit",
-    type: "Camion",
-    kilometrage: 156000,
-    status: "hors_service" as const,
-  },
-  {
-    id: "6",
-    immatriculation: "UV-678-WX",
-    modele: "Volkswagen Caddy",
-    type: "Utilitaire",
-    kilometrage: 34000,
-    status: "disponible" as const,
-  },
-];
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { Vehicle } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function Vehicules() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const filteredVehicles = mockVehicles.filter((vehicle) => {
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      toast({
+        title: "Non autorisé",
+        description: "Vous êtes déconnecté. Reconnexion...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+    }
+  }, [isAuthenticated, authLoading, toast]);
+
+  const { data: vehicles = [], isLoading } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles"],
+    retry: false,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/vehicles/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      toast({
+        title: "Véhicule supprimé",
+        description: "Le véhicule a été supprimé avec succès",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer le véhicule",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const filteredVehicles = vehicles.filter((vehicle) => {
+    const modele = `${vehicle.marque} ${vehicle.modele}`;
     const matchesSearch =
       vehicle.immatriculation.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vehicle.modele.toLowerCase().includes(searchTerm.toLowerCase());
+      modele.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || vehicle.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Chargement des véhicules...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -81,7 +87,7 @@ export default function Vehicules() {
         <div>
           <h1 className="text-3xl font-bold">Gestion des Véhicules</h1>
           <p className="text-muted-foreground">
-            {mockVehicles.length} véhicules au total
+            {vehicles.length} véhicules au total
           </p>
         </div>
         <AddVehicleDialog />
@@ -116,10 +122,15 @@ export default function Vehicules() {
         {filteredVehicles.map((vehicle) => (
           <VehicleCard
             key={vehicle.id}
-            {...vehicle}
+            id={vehicle.id}
+            immatriculation={vehicle.immatriculation}
+            modele={`${vehicle.marque} ${vehicle.modele}`}
+            type={vehicle.type}
+            kilometrage={vehicle.kilometrage}
+            status={vehicle.status}
             onView={(id) => console.log('View vehicle', id)}
             onEdit={(id) => console.log('Edit vehicle', id)}
-            onDelete={(id) => console.log('Delete vehicle', id)}
+            onDelete={(id) => deleteMutation.mutate(id)}
           />
         ))}
       </div>

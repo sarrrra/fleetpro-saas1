@@ -4,47 +4,67 @@ import { MaintenanceAlert } from "@/components/maintenance-alert";
 import { AddVehicleDialog } from "@/components/add-vehicle-dialog";
 import { Car, Users, Wrench, TrendingUp, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { isUnauthorizedError } from "@/lib/authUtils";
+import { Vehicle, MaintenanceRecord } from "@shared/schema";
+import { format } from "date-fns";
 
-// TODO: Remove mock data when connecting to backend
-const mockVehicles = [
-  {
-    id: "1",
-    immatriculation: "AB-123-CD",
-    modele: "Renault Trafic",
-    type: "Utilitaire",
-    kilometrage: 45000,
-    status: "disponible" as const,
-  },
-  {
-    id: "2",
-    immatriculation: "EF-456-GH",
-    modele: "Mercedes Sprinter",
-    type: "Camion",
-    kilometrage: 120000,
-    status: "en_location" as const,
-  },
-];
-
-const mockMaintenances = [
-  {
-    vehicleId: "1",
-    immatriculation: "AB-123-CD",
-    type: "Vidange moteur",
-    dueDate: "15/10/2024",
-    kilometrage: 50000,
-    urgency: "urgent" as const,
-  },
-  {
-    vehicleId: "3",
-    immatriculation: "IJ-789-KL",
-    type: "Remplacement filtres",
-    dueDate: "25/10/2024",
-    kilometrage: 120500,
-    urgency: "soon" as const,
-  },
-];
+interface DashboardStats {
+  activeVehicles: number;
+  totalVehicles: number;
+  activeDrivers: number;
+  upcomingMaintenance: number;
+  monthlyRevenue: number;
+}
 
 export default function Dashboard() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      toast({
+        title: "Non autorisé",
+        description: "Vous êtes déconnecté. Reconnexion...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+    }
+  }, [isAuthenticated, authLoading, toast]);
+
+  const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
+    queryKey: ["/api/dashboard/stats"],
+    retry: false,
+  });
+
+  const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles"],
+    retry: false,
+  });
+
+  const { data: maintenance = [], isLoading: maintenanceLoading } = useQuery<MaintenanceRecord[]>({
+    queryKey: ["/api/maintenance/upcoming"],
+    retry: false,
+  });
+
+  if (authLoading || statsLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Chargement du dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const recentVehicles = vehicles.slice(0, 3);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -58,28 +78,25 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Véhicules Actifs"
-          value="24"
+          value={stats?.activeVehicles?.toString() || "0"}
           icon={Car}
-          trend={{ value: 12, isPositive: true }}
-          description="Sur 30 véhicules total"
+          description={`Sur ${stats?.totalVehicles || 0} véhicules total`}
         />
         <StatCard
-          title="Chauffeurs"
-          value="18"
+          title="Chauffeurs Actifs"
+          value={stats?.activeDrivers?.toString() || "0"}
           icon={Users}
           description="Disponibles aujourd'hui"
         />
         <StatCard
           title="Entretiens Planifiés"
-          value="6"
+          value={stats?.upcomingMaintenance?.toString() || "0"}
           icon={Wrench}
-          trend={{ value: 5, isPositive: false }}
         />
         <StatCard
           title="Revenus Mensuel"
-          value="45,230 €"
+          value={`${stats?.monthlyRevenue?.toLocaleString('fr-FR') || "0"} €`}
           icon={TrendingUp}
-          trend={{ value: 8, isPositive: true }}
         />
       </div>
 
@@ -90,13 +107,28 @@ export default function Dashboard() {
             <AlertCircle className="h-5 w-5 text-chart-5" />
           </CardHeader>
           <CardContent className="space-y-4">
-            {mockMaintenances.map((maintenance) => (
-              <MaintenanceAlert
-                key={maintenance.vehicleId}
-                {...maintenance}
-                onSchedule={(id) => console.log('Schedule maintenance for', id)}
-              />
-            ))}
+            {maintenanceLoading ? (
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground">Chargement...</p>
+              </div>
+            ) : maintenance.length === 0 ? (
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground">Aucune alerte d'entretien</p>
+              </div>
+            ) : (
+              maintenance.slice(0, 3).map((m) => (
+                <MaintenanceAlert
+                  key={m.id}
+                  vehicleId={m.vehiculeId}
+                  immatriculation={m.vehiculeId}
+                  type={m.type}
+                  dueDate={m.datePrevu ? format(new Date(m.datePrevu), "dd/MM/yyyy") : "Non défini"}
+                  kilometrage={m.kilometragePrevu || 0}
+                  urgency={m.urgency}
+                  onSchedule={(id) => console.log('Schedule maintenance for', id)}
+                />
+              ))
+            )}
           </CardContent>
         </Card>
 
@@ -105,15 +137,30 @@ export default function Dashboard() {
             <CardTitle>Véhicules récents</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {mockVehicles.map((vehicle) => (
-              <VehicleCard
-                key={vehicle.id}
-                {...vehicle}
-                onView={(id) => console.log('View vehicle', id)}
-                onEdit={(id) => console.log('Edit vehicle', id)}
-                onDelete={(id) => console.log('Delete vehicle', id)}
-              />
-            ))}
+            {vehiclesLoading ? (
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground">Chargement...</p>
+              </div>
+            ) : recentVehicles.length === 0 ? (
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground">Aucun véhicule</p>
+              </div>
+            ) : (
+              recentVehicles.map((vehicle) => (
+                <VehicleCard
+                  key={vehicle.id}
+                  id={vehicle.id}
+                  immatriculation={vehicle.immatriculation}
+                  modele={`${vehicle.marque} ${vehicle.modele}`}
+                  type={vehicle.type}
+                  kilometrage={vehicle.kilometrage}
+                  status={vehicle.status}
+                  onView={(id) => console.log('View vehicle', id)}
+                  onEdit={(id) => console.log('Edit vehicle', id)}
+                  onDelete={(id) => console.log('Delete vehicle', id)}
+                />
+              ))
+            )}
           </CardContent>
         </Card>
       </div>

@@ -68,21 +68,29 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function App() {
+function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
 
+  return (
+    <>
+      {!isLoading && isAuthenticated ? (
+        <AuthenticatedLayout>
+          <Router />
+        </AuthenticatedLayout>
+      ) : (
+        <Router />
+      )}
+      <Toaster />
+    </>
+  );
+}
+
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
-          {!isLoading && isAuthenticated ? (
-            <AuthenticatedLayout>
-              <Router />
-            </AuthenticatedLayout>
-          ) : (
-            <Router />
-          )}
-          <Toaster />
+          <AppContent />
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
