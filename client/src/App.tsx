@@ -12,6 +12,7 @@ import Dashboard from "@/pages/dashboard";
 import Vehicules from "@/pages/vehicules";
 import Chauffeurs from "@/pages/chauffeurs";
 import Clients from "@/pages/clients";
+import Carburant from "@/pages/carburant";
 import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 
@@ -39,6 +40,7 @@ function Router() {
           <Route path="/vehicules" component={Vehicules} />
           <Route path="/chauffeurs" component={Chauffeurs} />
           <Route path="/clients" component={Clients} />
+          <Route path="/carburant" component={Carburant} />
         </>
       )}
       <Route component={NotFound} />
