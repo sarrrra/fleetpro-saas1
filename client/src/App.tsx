@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Dashboard from "@/pages/dashboard";
 import Vehicules from "@/pages/vehicules";
 import Chauffeurs from "@/pages/chauffeurs";
+import Clients from "@/pages/clients";
 import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 
@@ -37,6 +38,7 @@ function Router() {
           <Route path="/" component={Dashboard} />
           <Route path="/vehicules" component={Vehicules} />
           <Route path="/chauffeurs" component={Chauffeurs} />
+          <Route path="/clients" component={Clients} />
         </>
       )}
       <Route component={NotFound} />

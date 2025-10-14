@@ -191,6 +191,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/clients/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const replitAuthId = req.user.claims.sub;
+      const user = await storage.getUserByReplitAuthId(replitAuthId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const validatedData = insertClientSchema.partial().omit({ organizationId: true }).parse(req.body);
+      const client = await storage.updateClient(req.params.id, user.organizationId, validatedData);
+      res.json(client);
+    } catch (error) {
+      console.error("Error updating client:", error);
+      res.status(400).json({ message: "Failed to update client" });
+    }
+  });
+
+  app.delete("/api/clients/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const replitAuthId = req.user.claims.sub;
+      const user = await storage.getUserByReplitAuthId(replitAuthId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      await storage.deleteClient(req.params.id, user.organizationId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting client:", error);
+      res.status(400).json({ message: "Failed to delete client" });
+    }
+  });
+
   // Fuel routes
   app.get("/api/fuel", isAuthenticated, async (req: any, res) => {
     try {
