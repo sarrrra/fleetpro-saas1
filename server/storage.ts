@@ -96,6 +96,7 @@ export interface IStorage {
   
   // User management operations
   getUsersByOrganization(organizationId: string): Promise<User[]>;
+  createUser(user: InsertUser): Promise<User>;
   updateUserRole(userId: string, organizationId: string, role: string): Promise<User>;
   deleteUser(userId: string, organizationId: string): Promise<void>;
 }
@@ -338,6 +339,11 @@ export class DatabaseStorage implements IStorage {
   // User management operations
   async getUsersByOrganization(organizationId: string): Promise<User[]> {
     return db.select().from(users).where(eq(users.organizationId, organizationId)).orderBy(users.nom);
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const [newUser] = await db.insert(users).values(user).returning();
+    return newUser;
   }
 
   async updateUserRole(userId: string, organizationId: string, role: string): Promise<User> {

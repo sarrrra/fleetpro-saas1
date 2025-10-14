@@ -3,7 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { 
-  insertVehicleSchema, 
+  insertVehicleSchema,
+  insertUserSchema,
   insertDriverSchema,
   insertClientSchema,
   insertFuelRecordSchema,
@@ -410,6 +411,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User management routes
+  app.post("/api/users", isAuthenticated, async (req: any, res) => {
+    try {
+      const replitAuthId = req.user.claims.sub;
+      const user = await storage.getUserByReplitAuthId(replitAuthId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      // Only admin_entreprise and super_admin can create users
+      if (user.role !== "admin_entreprise" && user.role !== "super_admin") {
+        return res.status(403).json({ message: "Unauthorized: Only administrators can create users" });
+      }
+
+      // Validate request body with schema
+      const createUserSchema = insertUserSchema.omit({ organizationId: true, replitAuthId: true });
+      const validatedData = createUserSchema.parse(req.body);
+
+      const newUser = await storage.createUser({
+        ...validatedData,
+        organizationId: user.organizationId,
+        replitAuthId: null,
+      });
+      res.json(newUser);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(400).json({ message: "Failed to create user" });
+    }
+  });
+
   app.get("/api/users", isAuthenticated, async (req: any, res) => {
     try {
       const replitAuthId = req.user.claims.sub;

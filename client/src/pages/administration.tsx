@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -5,8 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, UserCog, Trash2 } from "lucide-react";
+import { Shield, UserCog, Trash2, Plus } from "lucide-react";
 import type { User } from "@shared/schema";
+import { insertUserSchema } from "@shared/schema";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +23,24 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 
 const roleLabels: Record<string, string> = {
   super_admin: "Super Admin",
@@ -32,6 +55,177 @@ const roleBadgeVariant: Record<string, "default" | "secondary" | "destructive" |
   gestionnaire: "secondary",
   chauffeur: "outline",
 };
+
+const createUserFormSchema = insertUserSchema.omit({ 
+  id: true, 
+  createdAt: true, 
+  organizationId: true, 
+  replitAuthId: true 
+}).extend({
+  nom: z.string().min(1, "Le nom est requis"),
+  prenom: z.string().min(1, "Le prénom est requis"),
+  email: z.string().email("Email invalide").min(1, "L'email est requis"),
+  telephone: z.string().optional(),
+});
+
+type CreateUserFormValues = z.infer<typeof createUserFormSchema>;
+
+function AddUserDialog() {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+
+  const form = useForm<CreateUserFormValues>({
+    resolver: zodResolver(createUserFormSchema),
+    defaultValues: {
+      nom: "",
+      prenom: "",
+      email: "",
+      telephone: "",
+      role: "gestionnaire",
+    },
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (data: CreateUserFormValues) => {
+      await apiRequest("POST", "/api/users", data);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Utilisateur créé",
+        description: "L'utilisateur a été créé avec succès",
+      });
+      form.reset();
+      setOpen(false);
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer l'utilisateur",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: CreateUserFormValues) => {
+    mutation.mutate(data);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button data-testid="button-add-user">
+          <Plus className="h-4 w-4 mr-2" />
+          Nouvel Utilisateur
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Ajouter un nouvel utilisateur</DialogTitle>
+          <DialogDescription>
+            Remplissez les informations de l'utilisateur à ajouter à l'organisation.
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="prenom"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Prénom</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Jean" {...field} data-testid="input-prenom" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="nom"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nom</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Dupont" {...field} data-testid="input-nom" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="email" 
+                      placeholder="jean.dupont@example.com" 
+                      {...field} 
+                      data-testid="input-email" 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="telephone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Téléphone (optionnel)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="+213 123 456 789" 
+                      {...field} 
+                      value={field.value || ""} 
+                      data-testid="input-telephone" 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Rôle</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger data-testid="select-role">
+                        <SelectValue placeholder="Sélectionner un rôle" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="admin_entreprise">Admin Entreprise</SelectItem>
+                      <SelectItem value="gestionnaire">Gestionnaire</SelectItem>
+                      <SelectItem value="chauffeur">Chauffeur</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Annuler
+              </Button>
+              <Button type="submit" data-testid="button-submit-user" disabled={mutation.isPending}>
+                {mutation.isPending ? "Création..." : "Créer"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function Administration() {
   const { toast } = useToast();
@@ -116,11 +310,14 @@ export default function Administration() {
 
       <div className="flex-1 overflow-auto p-6">
         <Card>
-          <CardHeader>
-            <CardTitle>Utilisateurs de l'organisation</CardTitle>
-            <CardDescription>
-              {users?.length || 0} utilisateur(s) enregistré(s)
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <div>
+              <CardTitle>Utilisateurs de l'organisation</CardTitle>
+              <CardDescription>
+                {users?.length || 0} utilisateur(s) enregistré(s)
+              </CardDescription>
+            </div>
+            <AddUserDialog />
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
