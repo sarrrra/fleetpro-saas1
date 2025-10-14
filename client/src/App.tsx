@@ -14,6 +14,8 @@ import Chauffeurs from "@/pages/chauffeurs";
 import Clients from "@/pages/clients";
 import Carburant from "@/pages/carburant";
 import Maintenance from "@/pages/maintenance";
+import Tresorerie from "@/pages/tresorerie";
+import Factures from "@/pages/factures";
 import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 
@@ -43,6 +45,8 @@ function Router() {
           <Route path="/clients" component={Clients} />
           <Route path="/carburant" component={Carburant} />
           <Route path="/maintenance" component={Maintenance} />
+          <Route path="/tresorerie" component={Tresorerie} />
+          <Route path="/factures" component={Factures} />
         </>
       )}
       <Route component={NotFound} />
