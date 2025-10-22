@@ -179,12 +179,24 @@ export const organizationSettings = pgTable("organization_settings", {
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({ id: true, createdAt: true });
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertVehicleSchema = createInsertSchema(vehicles).omit({ id: true, createdAt: true });
-export const insertDriverSchema = createInsertSchema(drivers).omit({ id: true, createdAt: true });
+export const insertDriverSchema = createInsertSchema(drivers).omit({ id: true, createdAt: true }).extend({
+  dateExpirationPermis: z.union([z.string(), z.date()]).optional().nullable().transform(val => val ? new Date(val) : null),
+});
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true, createdAt: true });
-export const insertFuelRecordSchema = createInsertSchema(fuelRecords).omit({ id: true, createdAt: true });
-export const insertMaintenanceRecordSchema = createInsertSchema(maintenanceRecords).omit({ id: true, createdAt: true });
-export const insertTransactionSchema = createInsertSchema(transactions).omit({ id: true, createdAt: true });
-export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true, createdAt: true });
+export const insertFuelRecordSchema = createInsertSchema(fuelRecords).omit({ id: true, createdAt: true }).extend({
+  date: z.union([z.string(), z.date()]).transform(val => new Date(val)),
+});
+export const insertMaintenanceRecordSchema = createInsertSchema(maintenanceRecords).omit({ id: true, createdAt: true }).extend({
+  datePrevu: z.union([z.string(), z.date()]).optional().nullable().transform(val => val ? new Date(val) : null),
+  dateRealise: z.union([z.string(), z.date()]).optional().nullable().transform(val => val ? new Date(val) : null),
+});
+export const insertTransactionSchema = createInsertSchema(transactions).omit({ id: true, createdAt: true }).extend({
+  date: z.union([z.string(), z.date()]).transform(val => new Date(val)),
+});
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true, createdAt: true }).extend({
+  date: z.union([z.string(), z.date()]).transform(val => new Date(val)),
+  dateEcheance: z.union([z.string(), z.date()]).optional().nullable().transform(val => val ? new Date(val) : null),
+});
 export const insertOrganizationSettingsSchema = createInsertSchema(organizationSettings).omit({ id: true, updatedAt: true });
 
 // Types
