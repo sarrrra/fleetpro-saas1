@@ -147,7 +147,18 @@ Chaque table (sauf `users` et `organizations`) contient un champ `organizationId
 
 ## Changements Récents (Octobre 2024)
 
-### Session Actuelle - Conversion en Tableaux (Octobre 22, 2024)
+### Session Actuelle - Design Responsive Mobile/Tablette (Octobre 22, 2024)
+1. ✅ **Layout principal responsive** - Padding adaptatif `px-4 sm:px-6 lg:px-8 py-4 sm:py-6`
+2. ✅ **Headers de pages responsive** - Layout flex-col sur mobile → flex-row sur desktop
+3. ✅ **DataTable mobile-friendly** - Scroll horizontal avec `overflow-x-auto` + pagination responsive
+4. ✅ **Grilles de statistiques adaptatives** - 1 colonne mobile → 2-4 colonnes desktop selon contexte
+5. ✅ **Boutons adaptatifs** - Texte court sur mobile (`hidden xs:inline`) → texte complet sur desktop
+6. ✅ **Sidebar auto-collapse** - Collapsed sur mobile, expanded sur desktop via SidebarProvider
+7. ✅ **Breakpoints Tailwind** - sm:640px, md:768px, lg:1024px utilisés de manière cohérente
+8. ✅ **Tests E2E responsive** - Validé sur 5 tailles d'écran (375px, 428px, 768px, 1280px, 1920px)
+9. ✅ **8 pages responsive** - Dashboard, Véhicules, Chauffeurs, Clients, Carburant, Maintenance, Trésorerie, Factures
+
+### Session Précédente - Conversion en Tableaux (Octobre 22, 2024)
 1. ✅ Création composant DataTable réutilisable avec TanStack Table
 2. ✅ Conversion de toutes les pages en vue tableau avec recherche, tri et pagination
 3. ✅ Pages converties : Véhicules, Chauffeurs, Clients, Carburant, Maintenance, Trésorerie, Factures
