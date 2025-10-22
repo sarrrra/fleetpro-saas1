@@ -53,32 +53,52 @@ Chaque table (sauf `users` et `organizations`) contient un champ `organizationId
 - ✅ Interface French/Dark mode
 
 ### Gestion des Véhicules
-- ✅ Liste complète avec filtres (statut, recherche)
+- ✅ **Tableau interactif** avec recherche, tri, pagination (TanStack Table)
+- ✅ Colonnes: Marque, Modèle, Type, Immatriculation, Kilométrage, Statut, Actions
+- ✅ Actions inline: Modifier, Supprimer (avec confirmation)
 - ✅ Ajout de véhicule (marque, modèle, type, kilométrage, heures)
-- ✅ Suppression de véhicule
 - ✅ Statuts: disponible, en_location, en_maintenance, hors_service
 - ✅ Types: voiture, utilitaire, camion, bus, engin
 
 ### Gestion des Chauffeurs
+- ✅ **Tableau interactif** avec recherche, tri, pagination
+- ✅ Colonnes: Nom, Prénom, Téléphone, Véhicule Assigné, Actions
+- ✅ Actions inline: Modifier, Supprimer (avec confirmation)
 - ✅ CRUD complet avec assignation véhicule
 
 ### Gestion des Clients
+- ✅ **Tableau interactif** avec recherche, tri, pagination
+- ✅ Colonnes: Nom, Entreprise, Téléphone, Email, Solde, Actions
+- ✅ Actions inline: Modifier, Supprimer (avec confirmation)
 - ✅ CRUD complet avec suivi de solde
+- ✅ Badge coloré pour solde positif/négatif
 
 ### Suivi Carburant
-- ✅ Enregistrements avec statistiques (coût total, quantité, prix moyen)
+- ✅ **Tableau interactif** avec recherche, tri, pagination
+- ✅ Colonnes: Date, Véhicule, Chauffeur, Kilométrage, Quantité, Prix/L, Coût Total
+- ✅ Statistiques en temps réel (coût total, quantité totale, prix moyen/L)
+- ✅ Enregistrements avec détails complets
 
 ### Planification Maintenance
-- ✅ Création avec urgence (urgent/bientôt/programmé)
-- ✅ Suivi par kilométrage/heures
+- ✅ **Tableau interactif** avec recherche, tri, pagination
+- ✅ Colonnes: Véhicule, Type, Date Prévue, Kilométrage, Urgence, Coût
+- ✅ Badges colorés par urgence (urgent/bientôt/planifié/terminé)
+- ✅ Statistiques en temps réel (planifiés, bientôt, urgent, terminés)
+- ✅ Création avec urgence et suivi par kilométrage/heures
 
 ### Trésorerie
-- ✅ Transactions recettes/dépenses
-- ✅ Catégories et balance
+- ✅ **Tableau interactif** avec recherche, tri, pagination
+- ✅ Colonnes: Date, Type, Catégorie, Véhicule, Client, Montant
+- ✅ Badges colorés par type (recette/dépense)
+- ✅ Statistiques en temps réel (recettes, dépenses, solde)
+- ✅ Transactions recettes/dépenses avec catégories
 
 ### Facturation
-- ✅ Factures avec statuts (impayée, payée partiellement, payée)
-- ✅ Échéances et suivi paiements
+- ✅ **Tableau interactif** avec recherche, tri, pagination
+- ✅ Colonnes: N° Facture, Client, Date, Échéance, Montant Total, Montant Payé, Statut
+- ✅ Badges colorés par statut (impayée/partielle/payée)
+- ✅ Statistiques en temps réel (montant total, montant payé, en attente, impayées)
+- ✅ Factures avec échéances et suivi paiements
 
 ### Configuration
 - ✅ **Paramètres entreprise** - Registre commerce, NIS, NIF, article imposition, adresse
@@ -127,7 +147,14 @@ Chaque table (sauf `users` et `organizations`) contient un champ `organizationId
 
 ## Changements Récents (Octobre 2024)
 
-### Dernière Session (Octobre 2024)
+### Session Actuelle - Conversion en Tableaux (Octobre 22, 2024)
+1. ✅ Création composant DataTable réutilisable avec TanStack Table
+2. ✅ Conversion de toutes les pages en vue tableau avec recherche, tri et pagination
+3. ✅ Pages converties : Véhicules, Chauffeurs, Clients, Carburant, Maintenance, Trésorerie, Factures
+4. ✅ Actions inline (modifier/supprimer) avec AlertDialog de confirmation
+5. ✅ Tests end-to-end validés pour toutes les vues tableau
+
+### Session Précédente (Octobre 2024)
 1. ✅ Tous les 7 modules opérationnels complétés
 2. ✅ Module Configuration ajouté (Paramètres, Administration, Personnalisation)
 3. ✅ Tests end-to-end Playwright validés pour tous les modules
@@ -135,8 +162,8 @@ Chaque table (sauf `users` et `organizations`) contient un champ `organizationId
 5. ✅ Table organization_settings créée avec infos légales et personnalisation
 
 ### Modules Complets
-- ✅ Véhicules, Chauffeurs, Clients (CRUD complet)
-- ✅ Carburant, Maintenance, Trésorerie, Factures (fonctionnels)
+- ✅ Véhicules, Chauffeurs, Clients (CRUD complet avec tableaux interactifs)
+- ✅ Carburant, Maintenance, Trésorerie, Factures (tableaux interactifs + statistiques)
 - ✅ Configuration : Paramètres entreprise, Administration utilisateurs, Personnalisation thème
 
 ## Prochaines Étapes
@@ -154,9 +181,10 @@ Chaque table (sauf `users` et `organizations`) contient un champ `organizationId
 
 ### Composants Clés
 - `AppSidebar` - Navigation principale
-- `AddVehicleDialog` - Dialogue d'ajout de véhicule
-- `VehicleCard` - Carte véhicule
-- `StatCard` - Carte statistique
+- `DataTable` - Tableau réutilisable avec recherche, tri, pagination (TanStack Table)
+- `AddVehicleDialog`, `AddDriverDialog`, etc. - Dialogues d'ajout d'entités
+- `EditVehicleDialog`, `EditDriverDialog`, etc. - Dialogues de modification
+- `StatCard` - Carte statistique pour KPIs
 - `MaintenanceAlert` - Alerte d'entretien
 
 ## Configuration
