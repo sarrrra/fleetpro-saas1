@@ -1,26 +1,52 @@
-import { useState, useEffect } from "react";
-import { VehicleCard } from "@/components/vehicle-card";
+import { useEffect } from "react";
 import { AddVehicleDialog } from "@/components/add-vehicle-dialog";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Vehicle } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { DataTable } from "@/components/ui/data-table";
+import { ColumnDef } from "@tanstack/react-table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Edit2, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+const statusLabels: Record<string, string> = {
+  disponible: "Disponible",
+  en_location: "En location",
+  en_maintenance: "En maintenance",
+  hors_service: "Hors service",
+};
+
+const statusColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  disponible: "default",
+  en_location: "secondary",
+  en_maintenance: "outline",
+  hors_service: "destructive",
+};
+
+const typeLabels: Record<string, string> = {
+  voiture: "Voiture",
+  utilitaire: "Utilitaire",
+  camion: "Camion",
+  bus: "Bus",
+  engin: "Engin",
+};
 
 export default function Vehicules() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -61,14 +87,99 @@ export default function Vehicules() {
     },
   });
 
-  const filteredVehicles = vehicles.filter((vehicle) => {
-    const modele = `${vehicle.marque} ${vehicle.modele}`;
-    const matchesSearch =
-      vehicle.immatriculation.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      modele.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || vehicle.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const columns: ColumnDef<Vehicle>[] = [
+    {
+      accessorKey: "immatriculation",
+      header: "Immatriculation",
+      cell: ({ row }) => (
+        <div className="font-medium">{row.getValue("immatriculation")}</div>
+      ),
+    },
+    {
+      accessorKey: "marque",
+      header: "Marque",
+    },
+    {
+      accessorKey: "modele",
+      header: "Modèle",
+    },
+    {
+      accessorKey: "type",
+      header: "Type",
+      cell: ({ row }) => {
+        const type = row.getValue("type") as string;
+        return typeLabels[type] || type;
+      },
+    },
+    {
+      accessorKey: "kilometrage",
+      header: "Kilométrage",
+      cell: ({ row }) => {
+        const km = row.getValue("kilometrage") as number;
+        return `${km.toLocaleString("fr-FR")} km`;
+      },
+    },
+    {
+      accessorKey: "status",
+      header: "Statut",
+      cell: ({ row }) => {
+        const status = row.getValue("status") as string;
+        return (
+          <Badge variant={statusColors[status] || "default"}>
+            {statusLabels[status] || status}
+          </Badge>
+        );
+      },
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const vehicle = row.original;
+        return (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => console.log("Edit", vehicle.id)}
+              data-testid={`button-edit-vehicle-${vehicle.id}`}
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  data-testid={`button-delete-vehicle-${vehicle.id}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Êtes-vous sûr de vouloir supprimer le véhicule {vehicle.immatriculation} ?
+                    Cette action est irréversible.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => deleteMutation.mutate(vehicle.id)}
+                    data-testid="button-confirm-delete"
+                  >
+                    Supprimer
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        );
+      },
+    },
+  ];
 
   if (isLoading) {
     return (
@@ -87,59 +198,17 @@ export default function Vehicules() {
         <div>
           <h1 className="text-3xl font-bold">Gestion des Véhicules</h1>
           <p className="text-muted-foreground">
-            {vehicles.length} véhicules au total
+            {vehicles.length} véhicule(s) au total
           </p>
         </div>
         <AddVehicleDialog />
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher par immatriculation ou modèle..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-            data-testid="input-search-vehicles"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-filter-status">
-            <SelectValue placeholder="Filtrer par statut" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les statuts</SelectItem>
-            <SelectItem value="disponible">Disponible</SelectItem>
-            <SelectItem value="en_location">En location</SelectItem>
-            <SelectItem value="en_maintenance">En maintenance</SelectItem>
-            <SelectItem value="hors_service">Hors service</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredVehicles.map((vehicle) => (
-          <VehicleCard
-            key={vehicle.id}
-            id={vehicle.id}
-            immatriculation={vehicle.immatriculation}
-            modele={`${vehicle.marque} ${vehicle.modele}`}
-            type={vehicle.type}
-            kilometrage={vehicle.kilometrage}
-            status={vehicle.status}
-            onView={(id) => console.log('View vehicle', id)}
-            onEdit={(id) => console.log('Edit vehicle', id)}
-            onDelete={(id) => deleteMutation.mutate(id)}
-          />
-        ))}
-      </div>
-
-      {filteredVehicles.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Aucun véhicule trouvé</p>
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        data={vehicles}
+        searchPlaceholder="Rechercher par immatriculation, marque, modèle..."
+      />
     </div>
   );
 }
