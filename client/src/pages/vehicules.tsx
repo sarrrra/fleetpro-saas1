@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AddVehicleDialog } from "@/components/add-vehicle-dialog";
+import { EditVehicleDialog } from "@/components/edit-vehicle-dialog";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -47,6 +48,7 @@ const typeLabels: Record<string, string> = {
 export default function Vehicules() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -141,7 +143,7 @@ export default function Vehicules() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => console.log("Edit", vehicle.id)}
+              onClick={() => setEditingVehicle(vehicle)}
               data-testid={`button-edit-vehicle-${vehicle.id}`}
             >
               <Edit2 className="h-4 w-4" />
@@ -209,6 +211,14 @@ export default function Vehicules() {
         data={vehicles}
         searchPlaceholder="Rechercher par immatriculation, marque, modèle..."
       />
+
+      {editingVehicle && (
+        <EditVehicleDialog
+          vehicle={editingVehicle}
+          open={!!editingVehicle}
+          onOpenChange={(open) => !open && setEditingVehicle(null)}
+        />
+      )}
     </div>
   );
 }

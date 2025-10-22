@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { AddDriverDialog } from "@/components/add-driver-dialog";
+import { EditDriverDialog } from "@/components/edit-driver-dialog";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit2, Trash2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -36,6 +38,7 @@ type DriverWithVehicle = Driver & { vehiculeAssigne?: string };
 
 export default function Chauffeurs() {
   const { toast } = useToast();
+  const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
 
   const { data: drivers = [], isLoading } = useQuery<Driver[]>({
     queryKey: ["/api/drivers"],
@@ -128,7 +131,7 @@ export default function Chauffeurs() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => console.log("Edit", driver.id)}
+              onClick={() => setEditingDriver(driver)}
               data-testid={`button-edit-driver-${driver.id}`}
             >
               <Edit2 className="h-4 w-4" />
@@ -203,6 +206,14 @@ export default function Chauffeurs() {
         data={driversWithVehicles}
         searchPlaceholder="Rechercher par nom, prénom, téléphone..."
       />
+
+      {editingDriver && (
+        <EditDriverDialog
+          driver={editingDriver}
+          open={!!editingDriver}
+          onOpenChange={(open) => !open && setEditingDriver(null)}
+        />
+      )}
     </div>
   );
 }
