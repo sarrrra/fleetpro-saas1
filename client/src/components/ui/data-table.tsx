@@ -77,7 +77,7 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -139,11 +139,11 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="text-sm text-muted-foreground">
           {table.getFilteredRowModel().rows.length} résultat(s)
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             variant="outline"
             size="sm"
@@ -152,9 +152,9 @@ export function DataTable<TData, TValue>({
             data-testid="button-previous-page"
           >
             <ChevronLeft className="h-4 w-4" />
-            Précédent
+            <span className="hidden xs:inline">Précédent</span>
           </Button>
-          <div className="text-sm">
+          <div className="text-sm whitespace-nowrap">
             Page {table.getState().pagination.pageIndex + 1} sur{" "}
             {table.getPageCount()}
           </div>
@@ -165,7 +165,7 @@ export function DataTable<TData, TValue>({
             disabled={!table.getCanNextPage()}
             data-testid="button-next-page"
           >
-            Suivant
+            <span className="hidden xs:inline">Suivant</span>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>

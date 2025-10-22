@@ -161,10 +161,10 @@ export default function Tresorerie() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Trésorerie</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold">Trésorerie</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             {transactions.length} transaction(s)
           </p>
         </div>
@@ -172,7 +172,7 @@ export default function Tresorerie() {
           trigger={
             <Button data-testid="button-add-transaction">
               <Plus className="h-4 w-4 mr-2" />
-              Nouvelle Transaction
+              <span className="hidden xs:inline">Nouvelle </span>Transaction
             </Button>
           }
         />

@@ -139,10 +139,10 @@ export default function Carburant() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Suivi Carburant</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold">Suivi Carburant</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             {fuelRecords.length} enregistrement(s)
           </p>
         </div>
@@ -150,7 +150,7 @@ export default function Carburant() {
           trigger={
             <Button data-testid="button-add-fuel">
               <Plus className="h-4 w-4 mr-2" />
-              Nouvel Enregistrement
+              <span className="hidden xs:inline">Nouvel </span>Enregistrement
             </Button>
           }
         />
