@@ -1,18 +1,14 @@
-import { useState } from "react";
 import { AddInvoiceDialog } from "@/components/add-invoice-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, Plus, FileText, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { Plus, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Invoice, Client } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DataTable } from "@/components/ui/data-table";
+import { ColumnDef } from "@tanstack/react-table";
 
 export default function Factures() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("all");
-
   const { data: invoices = [], isLoading } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices"],
   });
@@ -25,19 +21,6 @@ export default function Factures() {
     acc[client.id] = client.nom;
     return acc;
   }, {} as Record<string, string>);
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "impayee":
-        return <Badge variant="outline" className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20" data-testid="badge-impayee"><AlertCircle className="h-3 w-3 mr-1" />Impayée</Badge>;
-      case "payee_partiellement":
-        return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20" data-testid="badge-partielle"><Clock className="h-3 w-3 mr-1" />Payée partiellement</Badge>;
-      case "payee":
-        return <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20" data-testid="badge-payee"><CheckCircle2 className="h-3 w-3 mr-1" />Payée</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
 
   const formatCurrency = (amount: string | number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -56,21 +39,75 @@ export default function Factures() {
     });
   };
 
-  const filteredInvoices = invoices.filter((invoice) => {
-    const clientName = clientMap[invoice.clientId] || "";
-    const searchLower = searchTerm.toLowerCase();
-    
-    const matchesSearch = 
-      clientName.toLowerCase().includes(searchLower) ||
-      invoice.numeroFacture.toLowerCase().includes(searchLower);
+  type InvoiceWithClient = Invoice & { clientNom: string };
 
-    if (activeTab === "all") return matchesSearch;
-    return matchesSearch && invoice.status === activeTab;
-  });
+  const invoicesWithClients: InvoiceWithClient[] = invoices.map((invoice) => ({
+    ...invoice,
+    clientNom: clientMap[invoice.clientId] || 'Inconnu',
+  }));
 
-  const sortedInvoices = [...filteredInvoices].sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
+  const columns: ColumnDef<InvoiceWithClient>[] = [
+    {
+      accessorKey: "numeroFacture",
+      header: "N° Facture",
+      cell: ({ row }) => (
+        <div className="font-medium">{row.getValue("numeroFacture")}</div>
+      ),
+    },
+    {
+      accessorKey: "clientNom",
+      header: "Client",
+    },
+    {
+      accessorKey: "date",
+      header: "Date",
+      cell: ({ row }) => {
+        const date = row.getValue("date") as string;
+        return formatDate(date);
+      },
+    },
+    {
+      accessorKey: "dateEcheance",
+      header: "Échéance",
+      cell: ({ row }) => {
+        const date = row.getValue("dateEcheance") as string | null;
+        return formatDate(date);
+      },
+    },
+    {
+      accessorKey: "montantTotal",
+      header: "Montant Total",
+      cell: ({ row }) => {
+        const montant = row.getValue("montantTotal") as string;
+        return <span className="font-medium">{formatCurrency(montant)}</span>;
+      },
+    },
+    {
+      accessorKey: "montantPaye",
+      header: "Montant Payé",
+      cell: ({ row }) => {
+        const montant = row.getValue("montantPaye") as string;
+        return <span className="text-green-600">{formatCurrency(montant)}</span>;
+      },
+    },
+    {
+      accessorKey: "status",
+      header: "Statut",
+      cell: ({ row }) => {
+        const status = row.getValue("status") as string;
+        switch (status) {
+          case "impayee":
+            return <Badge variant="outline" className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20"><AlertCircle className="h-3 w-3 mr-1" />Impayée</Badge>;
+          case "payee_partiellement":
+            return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20"><Clock className="h-3 w-3 mr-1" />Partielle</Badge>;
+          case "payee":
+            return <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20"><CheckCircle2 className="h-3 w-3 mr-1" />Payée</Badge>;
+          default:
+            return <Badge variant="outline">{status}</Badge>;
+        }
+      },
+    },
+  ];
 
   const stats = invoices.reduce(
     (acc, invoice) => {
@@ -93,8 +130,11 @@ export default function Factures() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Chargement...</p>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Chargement...</p>
+        </div>
       </div>
     );
   }
@@ -105,7 +145,7 @@ export default function Factures() {
         <div>
           <h1 className="text-3xl font-bold">Facturation</h1>
           <p className="text-muted-foreground">
-            {invoices.length} factures
+            {invoices.length} facture(s)
           </p>
         </div>
         <AddInvoiceDialog
@@ -153,87 +193,11 @@ export default function Factures() {
         </Card>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Rechercher par client ou numéro de facture..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-9"
-          data-testid="input-search-invoice"
-        />
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="all" data-testid="tab-all">Toutes</TabsTrigger>
-          <TabsTrigger value="impayee" data-testid="tab-impayee">Impayées</TabsTrigger>
-          <TabsTrigger value="payee_partiellement" data-testid="tab-partielle">Partielles</TabsTrigger>
-          <TabsTrigger value="payee" data-testid="tab-payee">Payées</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value={activeTab} className="mt-6">
-          <div className="grid gap-4">
-            {sortedInvoices.map((invoice) => {
-              const montantRestant = parseFloat(invoice.montantTotal.toString()) - parseFloat(invoice.montantPaye.toString());
-              
-              return (
-                <Card key={invoice.id} data-testid={`card-invoice-${invoice.id}`}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold">{invoice.numeroFacture}</h3>
-                          {getStatusBadge(invoice.status)}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Client: {clientMap[invoice.clientId] || 'Inconnu'}
-                        </p>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {invoice.notes && (
-                      <p className="text-sm mb-4">{invoice.notes}</p>
-                    )}
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Date d'émission</p>
-                        <p className="font-medium">{formatDate(invoice.date)}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Date d'échéance</p>
-                        <p className="font-medium">{formatDate(invoice.dateEcheance)}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Montant total</p>
-                        <p className="font-medium">{formatCurrency(invoice.montantTotal)}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Montant payé</p>
-                        <p className="font-medium text-green-600">{formatCurrency(invoice.montantPaye)}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Restant dû</p>
-                        <p className={`font-medium ${montantRestant > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                          {formatCurrency(montantRestant)}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-
-          {sortedInvoices.length === 0 && (
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Aucune facture trouvée</p>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+      <DataTable
+        columns={columns}
+        data={invoicesWithClients}
+        searchPlaceholder="Rechercher par numéro ou client..."
+      />
     </div>
   );
 }

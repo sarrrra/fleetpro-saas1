@@ -1,18 +1,14 @@
-import { useState } from "react";
 import { AddTransactionDialog } from "@/components/add-transaction-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, Plus, TrendingUp, TrendingDown, Wallet } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Transaction, Vehicle, Client } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DataTable } from "@/components/ui/data-table";
+import { ColumnDef } from "@tanstack/react-table";
 
 export default function Tresorerie() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("all");
-
   const { data: transactions = [], isLoading } = useQuery<Transaction[]>({
     queryKey: ["/api/transactions"],
   });
@@ -26,7 +22,7 @@ export default function Tresorerie() {
   });
 
   const vehicleMap = vehicles.reduce((acc, vehicle) => {
-    acc[vehicle.id] = `${vehicle.immatriculation} - ${vehicle.marque} ${vehicle.modele}`;
+    acc[vehicle.id] = `${vehicle.immatriculation}`;
     return acc;
   }, {} as Record<string, string>);
 
@@ -66,25 +62,76 @@ export default function Tresorerie() {
     });
   };
 
-  const filteredTransactions = transactions.filter((transaction) => {
-    const vehicleName = transaction.vehiculeId ? vehicleMap[transaction.vehiculeId] : "";
-    const clientName = transaction.clientId ? clientMap[transaction.clientId] : "";
-    const categoryLabel = getCategoryLabel(transaction.categorie).toLowerCase();
-    const searchLower = searchTerm.toLowerCase();
-    
-    const matchesSearch = 
-      vehicleName.toLowerCase().includes(searchLower) ||
-      clientName.toLowerCase().includes(searchLower) ||
-      categoryLabel.includes(searchLower) ||
-      (transaction.description && transaction.description.toLowerCase().includes(searchLower));
+  type TransactionWithNames = Transaction & {
+    vehiculeNom?: string;
+    clientNom?: string;
+  };
 
-    if (activeTab === "all") return matchesSearch;
-    return matchesSearch && transaction.type === activeTab;
-  });
+  const transactionsWithNames: TransactionWithNames[] = transactions.map((transaction) => ({
+    ...transaction,
+    vehiculeNom: transaction.vehiculeId ? vehicleMap[transaction.vehiculeId] : undefined,
+    clientNom: transaction.clientId ? clientMap[transaction.clientId] : undefined,
+  }));
 
-  const sortedTransactions = [...filteredTransactions].sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
+  const columns: ColumnDef<TransactionWithNames>[] = [
+    {
+      accessorKey: "date",
+      header: "Date",
+      cell: ({ row }) => {
+        const date = row.getValue("date") as string;
+        return formatDate(date);
+      },
+    },
+    {
+      accessorKey: "type",
+      header: "Type",
+      cell: ({ row }) => {
+        const type = row.getValue("type") as string;
+        return type === "recette" ? (
+          <Badge variant="default" className="bg-green-600">Recette</Badge>
+        ) : (
+          <Badge variant="destructive">Dépense</Badge>
+        );
+      },
+    },
+    {
+      accessorKey: "categorie",
+      header: "Catégorie",
+      cell: ({ row }) => {
+        const cat = row.getValue("categorie") as string;
+        return getCategoryLabel(cat);
+      },
+    },
+    {
+      accessorKey: "vehiculeNom",
+      header: "Véhicule",
+      cell: ({ row }) => {
+        const vehicule = row.getValue("vehiculeNom") as string | undefined;
+        return vehicule || <span className="text-muted-foreground text-sm">-</span>;
+      },
+    },
+    {
+      accessorKey: "clientNom",
+      header: "Client",
+      cell: ({ row }) => {
+        const client = row.getValue("clientNom") as string | undefined;
+        return client || <span className="text-muted-foreground text-sm">-</span>;
+      },
+    },
+    {
+      accessorKey: "montant",
+      header: "Montant",
+      cell: ({ row }) => {
+        const montant = row.getValue("montant") as string;
+        const type = row.original.type;
+        return (
+          <span className={`font-medium ${type === "recette" ? "text-green-600" : "text-red-600"}`}>
+            {formatCurrency(montant)}
+          </span>
+        );
+      },
+    },
+  ];
 
   const stats = transactions.reduce(
     (acc, transaction) => {
@@ -103,8 +150,11 @@ export default function Tresorerie() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Chargement...</p>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Chargement...</p>
+        </div>
       </div>
     );
   }
@@ -115,7 +165,7 @@ export default function Tresorerie() {
         <div>
           <h1 className="text-3xl font-bold">Trésorerie</h1>
           <p className="text-muted-foreground">
-            {transactions.length} transactions
+            {transactions.length} transaction(s)
           </p>
         </div>
         <AddTransactionDialog
@@ -166,73 +216,11 @@ export default function Tresorerie() {
         </Card>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Rechercher par véhicule, client, catégorie ou description..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-9"
-          data-testid="input-search-transaction"
-        />
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="all" data-testid="tab-all">Tous</TabsTrigger>
-          <TabsTrigger value="recette" data-testid="tab-recette">Recettes</TabsTrigger>
-          <TabsTrigger value="depense" data-testid="tab-depense">Dépenses</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value={activeTab} className="mt-6">
-          <div className="space-y-3">
-            {sortedTransactions.map((transaction) => (
-              <Card key={transaction.id} data-testid={`card-transaction-${transaction.id}`}>
-                <CardContent className="py-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-3">
-                        <Badge 
-                          variant={transaction.type === "recette" ? "default" : "outline"}
-                          className={transaction.type === "recette" 
-                            ? "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20" 
-                            : "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20"
-                          }
-                        >
-                          {transaction.type === "recette" ? "Recette" : "Dépense"}
-                        </Badge>
-                        <span className="text-sm font-medium">{getCategoryLabel(transaction.categorie)}</span>
-                        <span className="text-sm text-muted-foreground">{formatDate(transaction.date)}</span>
-                      </div>
-                      {transaction.description && (
-                        <p className="text-sm text-muted-foreground">{transaction.description}</p>
-                      )}
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        {transaction.vehiculeId && (
-                          <span>🚗 {vehicleMap[transaction.vehiculeId]}</span>
-                        )}
-                        {transaction.clientId && (
-                          <span>👤 {clientMap[transaction.clientId]}</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className={`text-xl font-bold ${transaction.type === "recette" ? "text-green-600" : "text-red-600"}`}>
-                      {transaction.type === "recette" ? "+" : "-"}{formatCurrency(transaction.montant)}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {sortedTransactions.length === 0 && (
-            <div className="text-center py-12">
-              <Wallet className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Aucune transaction trouvée</p>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+      <DataTable
+        columns={columns}
+        data={transactionsWithNames}
+        searchPlaceholder="Rechercher par catégorie, véhicule, client..."
+      />
     </div>
   );
 }

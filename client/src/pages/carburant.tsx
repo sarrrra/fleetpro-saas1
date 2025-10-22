@@ -1,23 +1,13 @@
-import { useState } from "react";
 import { AddFuelRecordDialog } from "@/components/add-fuel-record-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, Plus, Fuel } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { FuelRecord, Vehicle, Driver } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable } from "@/components/ui/data-table";
+import { ColumnDef } from "@tanstack/react-table";
 
 export default function Carburant() {
-  const [searchTerm, setSearchTerm] = useState("");
-
   const { data: fuelRecords = [], isLoading } = useQuery<FuelRecord[]>({
     queryKey: ["/api/fuel"],
   });
@@ -54,24 +44,6 @@ export default function Carburant() {
 
   const avgCostPerLiter = stats.totalQuantity > 0 ? stats.totalCost / stats.totalQuantity : 0;
 
-  // Filtrer les enregistrements
-  const filteredRecords = fuelRecords.filter((record) => {
-    const vehicleName = vehicleMap[record.vehiculeId] || "";
-    const driverName = record.chauffeurId ? driverMap[record.chauffeurId] : "";
-    const searchLower = searchTerm.toLowerCase();
-    
-    return (
-      vehicleName.toLowerCase().includes(searchLower) ||
-      driverName.toLowerCase().includes(searchLower) ||
-      record.kilometrage.toString().includes(searchTerm)
-    );
-  });
-
-  // Trier par date décroissante
-  const sortedRecords = [...filteredRecords].sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
-
   const formatCurrency = (amount: string | number) => {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
@@ -88,10 +60,79 @@ export default function Carburant() {
     });
   };
 
+  type FuelRecordWithNames = FuelRecord & {
+    vehiculeNom: string;
+    chauffeurNom?: string;
+  };
+
+  const recordsWithNames: FuelRecordWithNames[] = fuelRecords.map((record) => ({
+    ...record,
+    vehiculeNom: vehicleMap[record.vehiculeId] || 'Inconnu',
+    chauffeurNom: record.chauffeurId ? driverMap[record.chauffeurId] : undefined,
+  }));
+
+  const columns: ColumnDef<FuelRecordWithNames>[] = [
+    {
+      accessorKey: "date",
+      header: "Date",
+      cell: ({ row }) => {
+        const date = row.getValue("date") as string;
+        return formatDate(date);
+      },
+    },
+    {
+      accessorKey: "vehiculeNom",
+      header: "Véhicule",
+    },
+    {
+      accessorKey: "chauffeurNom",
+      header: "Chauffeur",
+      cell: ({ row }) => {
+        const chauffeur = row.getValue("chauffeurNom") as string | undefined;
+        return chauffeur || <span className="text-muted-foreground text-sm">Non spécifié</span>;
+      },
+    },
+    {
+      accessorKey: "kilometrage",
+      header: "Kilométrage",
+      cell: ({ row }) => {
+        const km = row.getValue("kilometrage") as string;
+        return `${parseInt(km).toLocaleString("fr-FR")} km`;
+      },
+    },
+    {
+      accessorKey: "quantite",
+      header: "Quantité",
+      cell: ({ row }) => {
+        const qte = row.getValue("quantite") as string;
+        return `${parseFloat(qte).toFixed(2)} L`;
+      },
+    },
+    {
+      accessorKey: "prixUnitaire",
+      header: "Prix/L",
+      cell: ({ row }) => {
+        const prix = row.getValue("prixUnitaire") as string;
+        return formatCurrency(prix);
+      },
+    },
+    {
+      accessorKey: "coutTotal",
+      header: "Coût Total",
+      cell: ({ row }) => {
+        const cout = row.getValue("coutTotal") as string;
+        return <span className="font-medium">{formatCurrency(cout)}</span>;
+      },
+    },
+  ];
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Chargement...</p>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Chargement...</p>
+        </div>
       </div>
     );
   }
@@ -102,7 +143,7 @@ export default function Carburant() {
         <div>
           <h1 className="text-3xl font-bold">Suivi Carburant</h1>
           <p className="text-muted-foreground">
-            {fuelRecords.length} enregistrements
+            {fuelRecords.length} enregistrement(s)
           </p>
         </div>
         <AddFuelRecordDialog
@@ -142,56 +183,11 @@ export default function Carburant() {
         </Card>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Rechercher par véhicule, chauffeur ou kilométrage..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-9"
-          data-testid="input-search-fuel"
-        />
-      </div>
-
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Véhicule</TableHead>
-              <TableHead>Chauffeur</TableHead>
-              <TableHead>Kilométrage</TableHead>
-              <TableHead>Quantité (L)</TableHead>
-              <TableHead>Prix/L</TableHead>
-              <TableHead>Coût Total</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedRecords.map((record) => (
-              <TableRow key={record.id} data-testid={`row-fuel-${record.id}`}>
-                <TableCell>{formatDate(record.date)}</TableCell>
-                <TableCell>{vehicleMap[record.vehiculeId] || 'Inconnu'}</TableCell>
-                <TableCell>
-                  {record.chauffeurId ? driverMap[record.chauffeurId] : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
-                </TableCell>
-                <TableCell>{record.kilometrage.toLocaleString('fr-FR')} km</TableCell>
-                <TableCell>{parseFloat(record.quantite).toFixed(2)} L</TableCell>
-                <TableCell>{formatCurrency(record.coutUnitaire)}</TableCell>
-                <TableCell className="font-medium">{formatCurrency(record.coutTotal)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      {sortedRecords.length === 0 && (
-        <div className="text-center py-12">
-          <Fuel className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Aucun enregistrement de carburant trouvé</p>
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        data={recordsWithNames}
+        searchPlaceholder="Rechercher par véhicule, chauffeur..."
+      />
     </div>
   );
 }

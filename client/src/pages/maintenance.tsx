@@ -1,18 +1,14 @@
-import { useState } from "react";
 import { AddMaintenanceDialog } from "@/components/add-maintenance-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, Plus, Wrench, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+import { Plus, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { MaintenanceRecord, Vehicle } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DataTable } from "@/components/ui/data-table";
+import { ColumnDef } from "@tanstack/react-table";
 
 export default function Maintenance() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("all");
-
   const { data: maintenanceRecords = [], isLoading } = useQuery<MaintenanceRecord[]>({
     queryKey: ["/api/maintenance"],
   });
@@ -26,21 +22,18 @@ export default function Maintenance() {
     return acc;
   }, {} as Record<string, string>);
 
-  const getStatusBadge = (record: MaintenanceRecord) => {
-    if (record.complete) {
-      return <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20" data-testid={`badge-termine`}><CheckCircle2 className="h-3 w-3 mr-1" />Terminé</Badge>;
-    }
-    
-    switch (record.urgency) {
-      case "scheduled":
-        return <Badge variant="outline" className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20" data-testid={`badge-planifie`}><Clock className="h-3 w-3 mr-1" />Planifié</Badge>;
-      case "soon":
-        return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20" data-testid={`badge-bientot`}><AlertTriangle className="h-3 w-3 mr-1" />Bientôt</Badge>;
-      case "urgent":
-        return <Badge variant="outline" className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20" data-testid={`badge-urgent`}><AlertTriangle className="h-3 w-3 mr-1" />Urgent</Badge>;
-      default:
-        return <Badge variant="outline">{record.urgency}</Badge>;
-    }
+  const getMaintenanceTypeLabel = (type: string) => {
+    const types: Record<string, string> = {
+      vidange: "Vidange",
+      filtres: "Filtres",
+      pneus: "Pneus",
+      freins: "Freins",
+      batterie: "Batterie",
+      courroie: "Courroie",
+      revision: "Révision",
+      autre: "Autre",
+    };
+    return types[type] || type;
   };
 
   const formatDate = (date: string | Date | null | undefined) => {
@@ -61,41 +54,72 @@ export default function Maintenance() {
     }).format(typeof amount === 'string' ? parseFloat(amount) : amount);
   };
 
-  const getMaintenanceTypeLabel = (type: string) => {
-    const types: Record<string, string> = {
-      vidange: "Vidange",
-      filtres: "Filtres",
-      pneus: "Pneus",
-      freins: "Freins",
-      batterie: "Batterie",
-      courroie: "Courroie",
-      revision: "Révision",
-      autre: "Autre",
-    };
-    return types[type] || type;
-  };
+  type MaintenanceWithVehicle = MaintenanceRecord & { vehiculeNom: string };
 
-  const filteredRecords = maintenanceRecords.filter((record) => {
-    const vehicleName = vehicleMap[record.vehiculeId] || "";
-    const searchLower = searchTerm.toLowerCase();
-    const typeLabel = getMaintenanceTypeLabel(record.type).toLowerCase();
-    
-    const matchesSearch = 
-      vehicleName.toLowerCase().includes(searchLower) ||
-      typeLabel.includes(searchLower) ||
-      (record.description && record.description.toLowerCase().includes(searchLower));
+  const recordsWithVehicles: MaintenanceWithVehicle[] = maintenanceRecords.map((record) => ({
+    ...record,
+    vehiculeNom: vehicleMap[record.vehiculeId] || 'Inconnu',
+  }));
 
-    if (activeTab === "all") return matchesSearch;
-    if (activeTab === "complete") return matchesSearch && record.complete;
-    if (activeTab === "pending") return matchesSearch && !record.complete;
-    return matchesSearch && record.urgency === activeTab;
-  });
-
-  const sortedRecords = [...filteredRecords].sort((a, b) => {
-    const dateA = a.datePrevu ? new Date(a.datePrevu).getTime() : 0;
-    const dateB = b.datePrevu ? new Date(b.datePrevu).getTime() : 0;
-    return dateB - dateA;
-  });
+  const columns: ColumnDef<MaintenanceWithVehicle>[] = [
+    {
+      accessorKey: "vehiculeNom",
+      header: "Véhicule",
+    },
+    {
+      accessorKey: "type",
+      header: "Type",
+      cell: ({ row }) => {
+        const type = row.getValue("type") as string;
+        return getMaintenanceTypeLabel(type);
+      },
+    },
+    {
+      accessorKey: "datePrevu",
+      header: "Date Prévue",
+      cell: ({ row }) => {
+        const date = row.getValue("datePrevu") as string | null;
+        return formatDate(date);
+      },
+    },
+    {
+      accessorKey: "kilometragePrevu",
+      header: "Kilométrage",
+      cell: ({ row }) => {
+        const km = row.getValue("kilometragePrevu") as string | null;
+        return km ? `${parseInt(km).toLocaleString("fr-FR")} km` : "-";
+      },
+    },
+    {
+      accessorKey: "urgency",
+      header: "Urgence",
+      cell: ({ row }) => {
+        const record = row.original;
+        if (record.complete) {
+          return <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20"><CheckCircle2 className="h-3 w-3 mr-1" />Terminé</Badge>;
+        }
+        
+        switch (record.urgency) {
+          case "scheduled":
+            return <Badge variant="outline" className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20"><Clock className="h-3 w-3 mr-1" />Planifié</Badge>;
+          case "soon":
+            return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20"><AlertTriangle className="h-3 w-3 mr-1" />Bientôt</Badge>;
+          case "urgent":
+            return <Badge variant="outline" className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20"><AlertTriangle className="h-3 w-3 mr-1" />Urgent</Badge>;
+          default:
+            return <Badge variant="outline">{record.urgency}</Badge>;
+        }
+      },
+    },
+    {
+      accessorKey: "cout",
+      header: "Coût",
+      cell: ({ row }) => {
+        const cout = row.getValue("cout") as string | null;
+        return formatCurrency(cout);
+      },
+    },
+  ];
 
   const stats = {
     scheduled: maintenanceRecords.filter(r => !r.complete && r.urgency === "scheduled").length,
@@ -106,8 +130,11 @@ export default function Maintenance() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Chargement...</p>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Chargement...</p>
+        </div>
       </div>
     );
   }
@@ -118,7 +145,7 @@ export default function Maintenance() {
         <div>
           <h1 className="text-3xl font-bold">Planification Maintenance</h1>
           <p className="text-muted-foreground">
-            {maintenanceRecords.length} enregistrements
+            {maintenanceRecords.length} enregistrement(s)
           </p>
         </div>
         <AddMaintenanceDialog
@@ -166,80 +193,11 @@ export default function Maintenance() {
         </Card>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Rechercher par véhicule, type ou description..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-9"
-          data-testid="input-search-maintenance"
-        />
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="all" data-testid="tab-all">Tous</TabsTrigger>
-          <TabsTrigger value="pending" data-testid="tab-pending">En attente</TabsTrigger>
-          <TabsTrigger value="complete" data-testid="tab-complete">Terminés</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value={activeTab} className="mt-6">
-          <div className="grid gap-4">
-            {sortedRecords.map((record) => (
-              <Card key={record.id} data-testid={`card-maintenance-${record.id}`}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold">
-                          {getMaintenanceTypeLabel(record.type)}
-                        </h3>
-                        {getStatusBadge(record)}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {vehicleMap[record.vehiculeId] || 'Véhicule inconnu'}
-                      </p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {record.description && (
-                    <p className="text-sm mb-4">{record.description}</p>
-                  )}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Date prévue</p>
-                      <p className="font-medium">{formatDate(record.datePrevu)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Date réalisée</p>
-                      <p className="font-medium">{formatDate(record.dateRealise)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Km prévu</p>
-                      <p className="font-medium">
-                        {record.kilometragePrevu ? `${record.kilometragePrevu.toLocaleString('fr-FR')} km` : '-'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Coût</p>
-                      <p className="font-medium">{formatCurrency(record.cout)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {sortedRecords.length === 0 && (
-            <div className="text-center py-12">
-              <Wrench className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Aucun enregistrement de maintenance trouvé</p>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+      <DataTable
+        columns={columns}
+        data={recordsWithVehicles}
+        searchPlaceholder="Rechercher par véhicule, type..."
+      />
     </div>
   );
 }
