@@ -1,0 +1,271 @@
+# Prompt : Application SaaS B2B FleetPro - Gestion de Parc Automobile
+
+## Vue d'ensemble
+Créer une application web SaaS B2B multi-tenant appelée **FleetPro** permettant aux entreprises de gérer leur parc automobile (voitures, utilitaires, camions, bus, engins). L'application doit supporter la gestion complète des véhicules, chauffeurs, clients, suivi de carburant, planification de maintenance, trésorerie et facturation.
+
+## Stack Technologique
+- **Frontend** : React 18 + TypeScript avec Vite
+- **Backend** : Express.js + Node.js
+- **Base de données** : PostgreSQL avec Drizzle ORM
+- **Authentification** : Replit Auth (OpenID Connect)
+- **UI** : Shadcn/UI + Tailwind CSS avec support Dark Mode
+- **State Management** : TanStack Query v5
+- **Tables** : TanStack Table avec recherche, tri et pagination
+- **Design** : Interface entièrement responsive (mobile, tablette, desktop)
+
+## Architecture Multi-Tenant
+
+### Isolation des Données
+- Chaque utilisateur appartient à une organisation (tenant)
+- Toutes les données sont isolées par `organizationId`
+- Au premier login, l'utilisateur se voit automatiquement créer une organisation
+- Toutes les requêtes API filtrent automatiquement par organisation
+
+### Rôles Utilisateur
+- `super_admin` : Accès global
+- `admin_entreprise` : Administrateur de l'organisation
+- `gestionnaire` : Gestion opérationnelle
+- `chauffeur` : Accès limité
+
+## Schéma de Base de Données
+
+### Tables Principales
+1. **organizations** - Entreprises clientes (tenants)
+2. **users** - Utilisateurs avec rôles et lien Replit Auth
+3. **vehicles** - Véhicules avec types (voiture, utilitaire, camion, bus, engin)
+4. **drivers** - Chauffeurs assignables aux véhicules
+5. **clients** - Clients de l'entreprise avec suivi de solde
+6. **fuel_records** - Enregistrements de ravitaillement carburant
+7. **maintenance_records** - Planification et suivi d'entretien avec urgence
+8. **transactions** - Transactions financières (recettes/dépenses)
+9. **invoices** - Factures clients avec suivi paiements
+10. **organization_settings** - Paramètres et personnalisation organisations
+11. **sessions** - Sessions utilisateur PostgreSQL
+
+## Fonctionnalités par Module
+
+### 1. Authentification
+- Connexion via Replit Auth (Google, GitHub, Email)
+- Auto-création organisation au premier login
+- Gestion session PostgreSQL
+- Protection routes API avec middleware `isAuthenticated`
+- Rafraîchissement automatique tokens
+
+### 2. Dashboard
+- **KPIs en temps réel** : Véhicules actifs, chauffeurs, entretiens prévus, revenus mensuels
+- **Grille responsive** : 1 col mobile → 2 cols tablet → 4 cols desktop
+- **Alertes maintenance** : Affichage entretiens urgents/bientôt avec badges colorés
+- **Véhicules récents** : Liste des derniers véhicules ajoutés
+
+### 3. Gestion des Véhicules
+- **Tableau interactif** avec TanStack Table
+- **Colonnes** : Marque, Modèle, Type, Immatriculation, Kilométrage, Heures, Statut, Actions
+- **Statuts** : disponible, en_location, en_maintenance, hors_service
+- **Types** : voiture, utilitaire, camion, bus, engin
+- **Actions inline** : Modifier (dialog pré-rempli), Supprimer (confirmation)
+- **CRUD complet** : Ajout, modification, suppression avec validation Zod
+
+### 4. Gestion des Chauffeurs
+- **Tableau interactif** avec recherche par nom/prénom/téléphone
+- **Colonnes** : Nom, Prénom, Téléphone, Véhicule Assigné, Actions
+- **Assignation véhicule** : Select dropdown avec liste véhicules disponibles
+- **Actions inline** : Modifier, Supprimer avec confirmation
+
+### 5. Gestion des Clients
+- **Tableau interactif** avec recherche multi-critères
+- **Colonnes** : Nom, Entreprise, Téléphone, Email, Solde, Actions
+- **Badge solde** : Vert si positif, rouge si négatif
+- **CRUD complet** : Gestion complète clients avec suivi financier
+
+### 6. Suivi Carburant
+- **Statistiques** : Coût total, quantité totale, prix moyen/litre (grille 3 cols)
+- **Tableau** : Date, Véhicule, Chauffeur, Kilométrage, Quantité, Prix/L, Coût Total
+- **Calcul automatique** : Coût total = quantité × prix unitaire
+- **Format français** : Dates, nombres et devises formatés
+
+### 7. Planification Maintenance
+- **Statistiques** : Planifiés, Bientôt, Urgent, Terminés (grille 4 cols)
+- **Badges urgence** : Vert (planifié), Jaune (bientôt), Rouge (urgent), Gris (terminé)
+- **Colonnes** : Véhicule, Type entretien, Date prévue, Kilométrage, Urgence, Coût
+- **Suivi** : Par kilométrage et/ou heures machine
+
+### 8. Trésorerie
+- **Statistiques** : Recettes (vert), Dépenses (rouge), Solde (grille 3 cols)
+- **Types** : recette, dépense avec badges colorés
+- **Catégories** : location, vente, carburant, entretien, assurance, autre
+- **Colonnes** : Date, Type, Catégorie, Véhicule, Client, Montant
+
+### 9. Facturation
+- **Statistiques** : Montant total, Montant payé, En attente, Impayées (grille 4 cols)
+- **Statuts** : impayée (rouge), payee_partiellement (orange), payee (vert)
+- **Colonnes** : N° Facture, Client, Date, Échéance, Montant Total, Montant Payé, Statut
+- **Suivi paiements** : Calcul automatique montant restant
+
+### 10. Configuration
+#### Paramètres Entreprise
+- Registre de commerce, NIS, NIF, Article d'imposition
+- Adresse complète
+
+#### Administration
+- Liste utilisateurs de l'organisation
+- Modification rôles utilisateur
+- Suppression utilisateurs (sauf soi-même)
+
+#### Personnalisation
+- Couleurs de thème personnalisées
+- Logo entreprise (upload)
+
+## Design Responsive
+
+### Breakpoints Tailwind
+- Mobile : < 640px
+- Tablet : 640px - 1023px
+- Desktop : ≥ 1024px
+
+### Layout Principal
+- **Padding adaptatif** : `px-4 sm:px-6 lg:px-8 py-4 sm:py-6`
+- **Sidebar** : Auto-collapse sur mobile, expanded sur desktop
+- **Toggle sidebar** : Bouton hamburger dans header
+
+### Headers de Pages
+- **Mobile** : Layout colonne (flex-col), titre 2xl, bouton texte court
+- **Desktop** : Layout ligne (flex-row), titre 3xl, bouton texte complet
+- **Exemple bouton** : `<span className="hidden xs:inline">Nouveau </span>Véhicule`
+
+### DataTable
+- **Container** : `overflow-x-auto` pour scroll horizontal mobile
+- **Pagination** : Responsive, colonnes sur mobile → ligne sur desktop
+- **Recherche** : Input adaptatif avec placeholder français
+
+### Grilles de Statistiques
+- **Dashboard** : 1 col mobile → 2 cols (md) → 4 cols (lg)
+- **Carburant/Trésorerie** : 1 col → 3 cols (md)
+- **Maintenance/Factures** : 1 col → 4 cols (md)
+
+## Interface Utilisateur
+
+### Composants Shadcn/UI
+- **DataTable** : Composant réutilisable avec TanStack Table
+- **Dialogs** : Pour ajout/modification entités
+- **AlertDialog** : Confirmations suppression
+- **Form** : react-hook-form + zodResolver
+- **Cards** : Statistiques et affichage données
+- **Badges** : Statuts colorés (variant selon contexte)
+- **Buttons** : Variants (default, ghost, outline, destructive)
+- **Sidebar** : Navigation principale avec SidebarProvider
+
+### Conventions
+- **Langue** : Toute l'interface en français
+- **Format dates** : dd/MM/yyyy (format français)
+- **Format nombres** : Séparateur milliers espace, décimale virgule
+- **Devise** : DZD (Dinar Algérien) ou € selon préférence
+- **Dark mode** : Activé par défaut avec toggle
+- **Icons** : Lucide React pour toutes les icônes
+
+### Formulaires
+- Validation Zod avec schémas Drizzle
+- Messages d'erreur en français
+- States loading avec spinners
+- Toast notifications pour feedback utilisateur
+- data-testid sur tous les éléments interactifs
+
+## API Routes
+
+### Structure
+- Toutes les routes protégées par `isAuthenticated` middleware
+- Filtrage automatique par `organizationId` depuis `req.user`
+- Validation Zod des body requests
+- Gestion erreurs avec try/catch et messages explicites
+
+### Endpoints Principaux
+```
+GET    /api/auth/user           - Utilisateur connecté
+GET    /api/login               - Initier login
+GET    /api/logout              - Déconnexion
+GET    /api/callback            - Callback OAuth
+
+GET    /api/vehicles            - Liste véhicules
+POST   /api/vehicles            - Créer véhicule
+PATCH  /api/vehicles/:id        - Modifier véhicule
+DELETE /api/vehicles/:id        - Supprimer véhicule
+
+GET    /api/drivers             - Liste chauffeurs
+POST   /api/drivers             - Créer chauffeur
+PATCH  /api/drivers/:id         - Modifier chauffeur
+DELETE /api/drivers/:id         - Supprimer chauffeur
+
+GET    /api/clients             - Liste clients
+POST   /api/clients             - Créer client
+PATCH  /api/clients/:id         - Modifier client
+DELETE /api/clients/:id         - Supprimer client
+
+GET    /api/fuel-records        - Enregistrements carburant
+POST   /api/fuel-records        - Créer enregistrement
+DELETE /api/fuel-records/:id    - Supprimer enregistrement
+
+GET    /api/maintenance         - Enregistrements maintenance
+POST   /api/maintenance         - Créer enregistrement
+PATCH  /api/maintenance/:id     - Modifier (marquer terminé)
+DELETE /api/maintenance/:id     - Supprimer enregistrement
+
+GET    /api/transactions        - Transactions
+POST   /api/transactions        - Créer transaction
+DELETE /api/transactions/:id    - Supprimer transaction
+
+GET    /api/invoices            - Factures
+POST   /api/invoices            - Créer facture
+DELETE /api/invoices/:id        - Supprimer facture
+
+GET    /api/dashboard/stats     - Statistiques dashboard
+
+GET    /api/settings            - Paramètres organisation
+PUT    /api/settings            - Modifier paramètres
+
+GET    /api/users               - Utilisateurs organisation
+PATCH  /api/users/:id           - Modifier rôle
+DELETE /api/users/:id           - Supprimer utilisateur
+```
+
+## Tests End-to-End
+
+### Playwright Tests
+- Tests sur 5 tailles d'écran (375px, 428px, 768px, 1280px, 1920px)
+- Validation CRUD pour toutes les entités
+- Tests navigation et sidebar
+- Tests formulaires et validation
+- Tests responsive design
+- Tests authentification OIDC
+
+### Coverage
+- Toutes les pages de données testées
+- Tous les flux CRUD validés
+- Responsive vérifié sur mobile, tablette, desktop
+
+## Configuration Projet
+
+### Structure Fichiers
+```
+client/
+  src/
+    components/      - Composants UI réutilisables
+    pages/          - Pages de l'application
+    hooks/          - Custom hooks (useAuth, useMobile)
+    lib/            - Utils et queryClient
+server/
+  routes.ts         - Routes API Express
+  auth.ts           - Configuration Replit Auth
+  index.ts          - Point d'entrée serveur
+shared/
+  schema.ts         - Schéma Drizzle + types Zod
+```
+
+### Scripts
+```bash
+npm run dev           # Démarrer dev (frontend + backend)
+npm run db:push       # Synchroniser schéma DB
+npm run db:studio     # Ouvrir Drizzle Studio
+```
+
+---
+
+**Ce prompt décrit une application complète, testée et prête pour la production avec design responsive professionnel adapté aux entreprises de gestion de flotte automobile.** 🚗✨
