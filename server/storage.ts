@@ -126,7 +126,7 @@ export class DatabaseStorage implements IStorage {
     const existingUser = await this.getUserByReplitAuthId(userData.replitAuthId);
     
     if (existingUser) {
-      // Update existing user
+      // Update existing user - PRESERVE role and organizationId
       const [user] = await db
         .update(users)
         .set({

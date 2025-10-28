@@ -44,9 +44,9 @@ export const organizations = pgTable("organizations", {
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   replitAuthId: text("replit_auth_id").unique(),
-  organizationId: varchar("organization_id").references(() => organizations.id).notNull(),
-  nom: text("nom").notNull(),
-  prenom: text("prenom").notNull(),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  nom: text("nom"),
+  prenom: text("prenom"),
   email: text("email").notNull().unique(),
   telephone: text("telephone"),
   role: userRoleEnum("role").notNull().default("gestionnaire"),

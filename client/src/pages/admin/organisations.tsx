@@ -131,7 +131,8 @@ export default function AdminOrganisations() {
 
   const createInvitationMutation = useMutation({
     mutationFn: async (data: { orgId: string; email: string }) => {
-      return apiRequest("POST", `/api/admin/organizations/${data.orgId}/invite`, { email: data.email });
+      const response = await apiRequest("POST", `/api/admin/organizations/${data.orgId}/invite`, { email: data.email });
+      return response.json();
     },
     onSuccess: (invitation: any) => {
       const inviteUrl = `${window.location.origin}/invitation/${invitation.token}`;
