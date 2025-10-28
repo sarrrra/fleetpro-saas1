@@ -1,7 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import crypto from "crypto";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
+import { users } from "@shared/schema";
 import { 
   insertVehicleSchema,
   insertUserSchema,
@@ -635,6 +639,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating organization settings:", error);
       res.status(500).json({ message: "Failed to update organization settings" });
+    }
+  });
+
+  // Invitation routes
+  // Create invitation (super_admin only)
+  app.post("/api/admin/organizations/:id/invite", isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    try {
+      const { email, role = "admin_entreprise" } = req.body;
+      const organizationId = req.params.id;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email requis" });
+      }
+      
+      // Générer un token unique
+      const token = crypto.randomBytes(32).toString('hex');
+      
+      // Expiration dans 7 jours
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+      
+      const invitation = await storage.createInvitation({
+        organizationId,
+        email,
+        token,
+        role,
+        expiresAt,
+        createdBy: req.user.id,
+      });
+      
+      res.json(invitation);
+    } catch (error) {
+      console.error("Error creating invitation:", error);
+      res.status(500).json({ message: "Échec de la création de l'invitation" });
+    }
+  });
+
+  // Get invitation by token (public)
+  app.get("/api/invitations/:token", async (req: any, res) => {
+    try {
+      const invitation = await storage.getInvitationByToken(req.params.token);
+      
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation introuvable" });
+      }
+      
+      // Vérifier si l'invitation est expirée
+      if (new Date() > new Date(invitation.expiresAt)) {
+        return res.status(410).json({ message: "Invitation expirée" });
+      }
+      
+      // Vérifier si l'invitation a déjà été utilisée
+      if (invitation.usedAt) {
+        return res.status(410).json({ message: "Invitation déjà utilisée" });
+      }
+      
+      // Récupérer les infos de l'organisation
+      const organization = await storage.getOrganizationById(invitation.organizationId);
+      
+      res.json({
+        ...invitation,
+        organization: {
+          nom: organization?.nom,
+          email: organization?.email,
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching invitation:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération de l'invitation" });
+    }
+  });
+
+  // Accept invitation (after login)
+  app.post("/api/invitations/:token/accept", isAuthenticated, async (req: any, res) => {
+    try {
+      const invitation = await storage.getInvitationByToken(req.params.token);
+      
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation introuvable" });
+      }
+      
+      // Vérifier si l'invitation est expirée
+      if (new Date() > new Date(invitation.expiresAt)) {
+        return res.status(410).json({ message: "Invitation expirée" });
+      }
+      
+      // Vérifier si l'invitation a déjà été utilisée
+      if (invitation.usedAt) {
+        return res.status(410).json({ message: "Invitation déjà utilisée" });
+      }
+      
+      // Vérifier que l'email correspond à l'utilisateur connecté
+      if (req.user.email !== invitation.email) {
+        return res.status(403).json({ message: "Cette invitation n'est pas pour vous" });
+      }
+      
+      // Mettre à jour l'utilisateur avec la nouvelle organisation et le rôle
+      await db
+        .update(users)
+        .set({
+          organizationId: invitation.organizationId,
+          role: invitation.role as any,
+        })
+        .where(eq(users.id, req.user.id));
+      
+      // Marquer l'invitation comme utilisée
+      await storage.markInvitationAsUsed(req.params.token);
+      
+      res.json({ message: "Invitation acceptée avec succès" });
+    } catch (error) {
+      console.error("Error accepting invitation:", error);
+      res.status(500).json({ message: "Erreur lors de l'acceptation de l'invitation" });
     }
   });
 

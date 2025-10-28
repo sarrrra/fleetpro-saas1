@@ -9,6 +9,7 @@ import {
   transactions,
   invoices,
   organizationSettings,
+  invitations,
   type Organization,
   type User,
   type InsertUser,
@@ -28,6 +29,8 @@ import {
   type InsertInvoice,
   type OrganizationSettings,
   type InsertOrganizationSettings,
+  type Invitation,
+  type InsertInvitation,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -102,6 +105,13 @@ export interface IStorage {
   updateUserRole(userId: string, organizationId: string, role: string): Promise<User>;
   deleteUser(userId: string, organizationId: string): Promise<void>;
   promoteUserToSuperAdmin(email: string): Promise<User | undefined>;
+  
+  // Invitation operations
+  createInvitation(invitation: InsertInvitation): Promise<Invitation>;
+  getInvitationByToken(token: string): Promise<Invitation | undefined>;
+  getInvitationsByOrganization(organizationId: string): Promise<Invitation[]>;
+  markInvitationAsUsed(token: string): Promise<Invitation>;
+  deleteInvitation(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -382,6 +392,34 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.email, email))
       .returning();
     return user;
+  }
+
+  // Invitation operations
+  async createInvitation(invitation: InsertInvitation): Promise<Invitation> {
+    const [newInvitation] = await db.insert(invitations).values(invitation).returning();
+    return newInvitation;
+  }
+
+  async getInvitationByToken(token: string): Promise<Invitation | undefined> {
+    const [invitation] = await db.select().from(invitations).where(eq(invitations.token, token));
+    return invitation;
+  }
+
+  async getInvitationsByOrganization(organizationId: string): Promise<Invitation[]> {
+    return db.select().from(invitations).where(eq(invitations.organizationId, organizationId)).orderBy(desc(invitations.createdAt));
+  }
+
+  async markInvitationAsUsed(token: string): Promise<Invitation> {
+    const [invitation] = await db
+      .update(invitations)
+      .set({ usedAt: new Date() })
+      .where(eq(invitations.token, token))
+      .returning();
+    return invitation;
+  }
+
+  async deleteInvitation(id: string): Promise<void> {
+    await db.delete(invitations).where(eq(invitations.id, id));
   }
 }
 
