@@ -13,6 +13,28 @@ import {
   insertInvoiceSchema
 } from "@shared/schema";
 
+// Super Admin middleware
+const isSuperAdmin = async (req: any, res: any, next: any) => {
+  try {
+    const replitAuthId = req.user.claims.sub;
+    const user = await storage.getUserByReplitAuthId(replitAuthId);
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    if (user.role !== "super_admin") {
+      return res.status(403).json({ message: "Unauthorized: Super admin access required" });
+    }
+    
+    req.currentUser = user;
+    next();
+  } catch (error) {
+    console.error("Error in super admin middleware:", error);
+    res.status(500).json({ message: "Authorization failed" });
+  }
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
@@ -517,6 +539,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
       res.status(500).json({ message: "Failed to fetch dashboard stats" });
+    }
+  });
+
+  // Admin routes - Organization management (super_admin only)
+  app.get("/api/admin/organizations", isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    try {
+      const organizations = await storage.getAllOrganizations();
+      res.json(organizations);
+    } catch (error) {
+      console.error("Error fetching organizations:", error);
+      res.status(500).json({ message: "Failed to fetch organizations" });
+    }
+  });
+
+  app.patch("/api/admin/organizations/:id", isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    try {
+      const organization = await storage.updateOrganization(req.params.id, req.body);
+      res.json(organization);
+    } catch (error) {
+      console.error("Error updating organization:", error);
+      res.status(400).json({ message: "Failed to update organization" });
+    }
+  });
+
+  app.get("/api/admin/organizations/:id/stats", isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    try {
+      const [vehicles, users] = await Promise.all([
+        storage.getVehiclesByOrganization(req.params.id),
+        storage.getUsersByOrganization(req.params.id),
+      ]);
+
+      res.json({
+        totalVehicles: vehicles.length,
+        totalUsers: users.length,
+      });
+    } catch (error) {
+      console.error("Error fetching organization stats:", error);
+      res.status(500).json({ message: "Failed to fetch organization stats" });
     }
   });
 

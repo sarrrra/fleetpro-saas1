@@ -19,6 +19,7 @@ import Factures from "@/pages/factures";
 import Parametres from "@/pages/parametres";
 import Administration from "@/pages/administration";
 import Personnalisation from "@/pages/personnalisation";
+import AdminOrganisations from "@/pages/admin/organisations";
 import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 
@@ -53,6 +54,7 @@ function Router() {
           <Route path="/parametres" component={Parametres} />
           <Route path="/administration" component={Administration} />
           <Route path="/personnalisation" component={Personnalisation} />
+          <Route path="/admin/organisations" component={AdminOrganisations} />
         </>
       )}
       <Route component={NotFound} />

@@ -22,8 +22,10 @@ import {
   Settings,
   Shield,
   Palette,
+  Building2,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 
 const menuItems = [
   {
@@ -70,6 +72,7 @@ const menuItems = [
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { user } = useAuth();
 
   return (
     <Sidebar>
@@ -85,6 +88,28 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
+        {user?.role === "super_admin" && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Super Admin</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/admin/organisations"}
+                    data-testid="link-sidebar-admin-organisations"
+                  >
+                    <Link href="/admin/organisations">
+                      <Building2 className="h-4 w-4" />
+                      <span>Organisations</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+        
         <SidebarGroup>
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>

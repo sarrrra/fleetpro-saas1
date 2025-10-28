@@ -46,6 +46,8 @@ export interface IStorage {
   
   // Organization operations
   getOrganizationById(id: string): Promise<Organization | undefined>;
+  getAllOrganizations(): Promise<Organization[]>;
+  updateOrganization(id: string, data: Partial<Organization>): Promise<Organization>;
   
   // Vehicle operations
   getVehiclesByOrganization(organizationId: string): Promise<Vehicle[]>;
@@ -154,6 +156,19 @@ export class DatabaseStorage implements IStorage {
   async getOrganizationById(id: string): Promise<Organization | undefined> {
     const [org] = await db.select().from(organizations).where(eq(organizations.id, id));
     return org;
+  }
+
+  async getAllOrganizations(): Promise<Organization[]> {
+    return db.select().from(organizations).orderBy(desc(organizations.createdAt));
+  }
+
+  async updateOrganization(id: string, data: Partial<Organization>): Promise<Organization> {
+    const [organization] = await db
+      .update(organizations)
+      .set(data)
+      .where(eq(organizations.id, id))
+      .returning();
+    return organization;
   }
 
   // Vehicle operations

@@ -20,6 +20,7 @@ export const vehicleStatusEnum = pgEnum("vehicle_status", ["disponible", "en_loc
 export const driverStatusEnum = pgEnum("driver_status", ["actif", "inactif", "conge"]);
 export const maintenanceUrgencyEnum = pgEnum("maintenance_urgency", ["urgent", "soon", "scheduled"]);
 export const transactionTypeEnum = pgEnum("transaction_type", ["recette", "depense"]);
+export const subscriptionStatusEnum = pgEnum("subscription_status", ["actif", "expire", "suspendu"]);
 
 // Organizations (Tenants)
 export const organizations = pgTable("organizations", {
@@ -28,6 +29,14 @@ export const organizations = pgTable("organizations", {
   email: text("email").notNull(),
   telephone: text("telephone"),
   adresse: text("adresse"),
+  nomGerant: text("nom_gerant"),
+  prenomGerant: text("prenom_gerant"),
+  emailGerant: text("email_gerant"),
+  telephoneGerant: text("telephone_gerant"),
+  dateDebutAbonnement: timestamp("date_debut_abonnement"),
+  dateFinAbonnement: timestamp("date_fin_abonnement"),
+  statutAbonnement: subscriptionStatusEnum("statut_abonnement").default("actif"),
+  dernierRappelEnvoye: timestamp("dernier_rappel_envoye"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

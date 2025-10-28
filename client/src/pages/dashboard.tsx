@@ -2,6 +2,7 @@ import { StatCard } from "@/components/stat-card";
 import { VehicleCard } from "@/components/vehicle-card";
 import { MaintenanceAlert } from "@/components/maintenance-alert";
 import { AddVehicleDialog } from "@/components/add-vehicle-dialog";
+import { SubscriptionAlerts } from "@/components/subscription-alerts";
 import { Car, Users, Wrench, TrendingUp, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
@@ -21,7 +22,7 @@ interface DashboardStats {
 }
 
 export default function Dashboard() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -99,6 +100,8 @@ export default function Dashboard() {
           icon={TrendingUp}
         />
       </div>
+
+      {user?.role === "super_admin" && <SubscriptionAlerts />}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
