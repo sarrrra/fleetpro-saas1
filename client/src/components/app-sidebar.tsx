@@ -98,9 +98,10 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        {user?.role === "super_admin" && (
+        {user?.role === "super_admin" ? (
+          /* Super Admin - Vue dédiée uniquement à la gestion des organisations */
           <SidebarGroup>
-            <SidebarGroupLabel>Super Admin</SidebarGroupLabel>
+            <SidebarGroupLabel>Administration Globale</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
@@ -118,73 +119,76 @@ export function AppSidebar() {
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-        )}
-        
-        <SidebarGroup>
-          <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location === item.url}
-                    data-testid={`link-sidebar-${item.title.toLowerCase()}`}
-                  >
-                    <Link href={item.url}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        ) : (
+          /* Utilisateurs normaux - Fonctionnalités de gestion du parc */
+          <>
+            <SidebarGroup>
+              <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {menuItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === item.url}
+                        data-testid={`link-sidebar-${item.title.toLowerCase()}`}
+                      >
+                        <Link href={item.url}>
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Configuration</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={location === "/parametres"}
-                  data-testid="link-sidebar-parametres"
-                >
-                  <Link href="/parametres">
-                    <Settings className="h-4 w-4" />
-                    <span>Paramètres</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={location === "/administration"}
-                  data-testid="link-sidebar-administration"
-                >
-                  <Link href="/administration">
-                    <Shield className="h-4 w-4" />
-                    <span>Administration</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={location === "/personnalisation"}
-                  data-testid="link-sidebar-personnalisation"
-                >
-                  <Link href="/personnalisation">
-                    <Palette className="h-4 w-4" />
-                    <span>Personnalisation</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel>Configuration</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/parametres"}
+                      data-testid="link-sidebar-parametres"
+                    >
+                      <Link href="/parametres">
+                        <Settings className="h-4 w-4" />
+                        <span>Paramètres</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/administration"}
+                      data-testid="link-sidebar-administration"
+                    >
+                      <Link href="/administration">
+                        <Shield className="h-4 w-4" />
+                        <span>Administration</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/personnalisation"}
+                      data-testid="link-sidebar-personnalisation"
+                    >
+                      <Link href="/personnalisation">
+                        <Palette className="h-4 w-4" />
+                        <span>Personnalisation</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
       <SidebarFooter className="p-4">
         <DropdownMenu>
