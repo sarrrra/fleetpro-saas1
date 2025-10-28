@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Building2, Users, AlertTriangle, CheckCircle, Edit, Car, UserCircle, Fuel, Wrench, Wallet, FileText } from "lucide-react";
+import { Building2, Users, AlertTriangle, CheckCircle, Edit, Car, UserCircle, Fuel, Wrench, Wallet, FileText, Mail, Copy, Check } from "lucide-react";
 import { type ColumnDef } from "@tanstack/react-table";
 import { type Organization } from "@shared/schema";
 import {
@@ -57,6 +57,10 @@ export default function AdminOrganisations() {
   const { toast } = useToast();
   const [editingOrg, setEditingOrg] = useState<OrganizationWithStats | null>(null);
   const [enabledFeatures, setEnabledFeatures] = useState<string[]>([]);
+  const [invitingOrg, setInvitingOrg] = useState<OrganizationWithStats | null>(null);
+  const [invitationEmail, setInvitationEmail] = useState("");
+  const [invitationLink, setInvitationLink] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const { data: organizations = [], isLoading } = useQuery<OrganizationWithStats[]>({
     queryKey: ["/api/admin/organizations"],
@@ -115,6 +119,70 @@ export default function AdminOrganisations() {
     } catch (error) {
       console.error("Error loading organization settings:", error);
       setEnabledFeatures(AVAILABLE_FEATURES.map(f => f.id));
+    }
+  };
+
+  const handleInvite = (org: OrganizationWithStats) => {
+    setInvitingOrg(org);
+    setInvitationEmail("");
+    setInvitationLink("");
+    setCopied(false);
+  };
+
+  const createInvitationMutation = useMutation({
+    mutationFn: async (data: { orgId: string; email: string }) => {
+      return apiRequest("POST", `/api/admin/organizations/${data.orgId}/invite`, { email: data.email });
+    },
+    onSuccess: (invitation: any) => {
+      const inviteUrl = `${window.location.origin}/invitation/${invitation.token}`;
+      setInvitationLink(inviteUrl);
+      toast({
+        title: "Invitation créée",
+        description: "Lien d'invitation généré avec succès",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Échec de la création de l'invitation",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreateInvitation = async () => {
+    if (!invitingOrg || !invitationEmail) {
+      toast({
+        title: "Erreur",
+        description: "Email requis",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    await createInvitationMutation.mutateAsync({
+      orgId: invitingOrg.id,
+      email: invitationEmail,
+    });
+  };
+
+  const handleCopyLink = async () => {
+    if (!invitationLink) return;
+    
+    try {
+      await navigator.clipboard.writeText(invitationLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast({
+        title: "Copié",
+        description: "Lien d'invitation copié dans le presse-papier",
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Échec de la copie du lien",
+        variant: "destructive",
+      });
     }
   };
 
@@ -264,14 +332,24 @@ export default function AdminOrganisations() {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => handleEdit(row.original)}
-          data-testid={`button-edit-${row.original.id}`}
-        >
-          <Edit className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleEdit(row.original)}
+            data-testid={`button-edit-${row.original.id}`}
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleInvite(row.original)}
+            data-testid={`button-invite-${row.original.id}`}
+          >
+            <Mail className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -528,6 +606,75 @@ export default function AdminOrganisations() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog d'invitation */}
+      <Dialog open={!!invitingOrg} onOpenChange={() => setInvitingOrg(null)}>
+        <DialogContent data-testid="dialog-invitation">
+          <DialogHeader>
+            <DialogTitle>Inviter un Administrateur</DialogTitle>
+            <DialogDescription>
+              Invitez un nouvel administrateur pour {invitingOrg?.nom}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Email de l'administrateur</label>
+              <Input
+                type="email"
+                placeholder="admin@exemple.com"
+                value={invitationEmail}
+                onChange={(e) => setInvitationEmail(e.target.value)}
+                data-testid="input-invitation-email"
+                disabled={!!invitationLink}
+              />
+            </div>
+
+            {!invitationLink ? (
+              <Button
+                onClick={handleCreateInvitation}
+                disabled={!invitationEmail || createInvitationMutation.isPending}
+                data-testid="button-create-invitation"
+                className="w-full"
+              >
+                {createInvitationMutation.isPending ? "Création..." : "Créer l'invitation"}
+              </Button>
+            ) : (
+              <div className="space-y-3">
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-sm font-medium mb-2">Lien d'invitation généré :</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-xs bg-background p-2 rounded border break-all">
+                      {invitationLink}
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleCopyLink}
+                      data-testid="button-copy-link"
+                    >
+                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Envoyez ce lien à l'administrateur. Le lien expire dans 7 jours.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setInvitingOrg(null)}
+              data-testid="button-close-invitation"
+            >
+              Fermer
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
