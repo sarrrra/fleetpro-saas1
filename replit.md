@@ -105,6 +105,16 @@ Chaque table (sauf `users` et `organizations`) contient un champ `organizationId
 - ✅ **Administration** - Gestion utilisateurs et rôles
 - ✅ **Personnalisation** - Couleurs thème, logo entreprise
 
+### Administration Super Admin (Nouveau - Octobre 28, 2024)
+- ✅ **Gestion des Organisations** - Tableau TanStack avec toutes les organisations clientes
+- ✅ **Informations Gérant** - Nom, prénom, email, téléphone du gérant
+- ✅ **Gestion Abonnements** - Dates début/fin, statut (actif/expiré/suspendu)
+- ✅ **Statistiques Globales** - Total organisations, actives, expirées, suspendues
+- ✅ **Alertes Abonnements** - Notifications 30 jours avant expiration
+- ✅ **Édition Organisations** - Dialog pour modifier infos gérant et abonnement
+- ✅ **Protection Routes** - Middleware `isSuperAdmin` pour sécuriser l'accès
+- ✅ **Navigation Conditionnelle** - Section "Super Admin" visible uniquement pour super_admin
+
 ### Pages Principales
 - ✅ Landing page (non authentifié)
 - ✅ Dashboard (authentifié)
@@ -142,12 +152,26 @@ Chaque table (sauf `users` et `organizations`) contient un champ `organizationId
 - `PATCH /api/users/:id` - Modifier rôle utilisateur
 - `DELETE /api/users/:id` - Supprimer utilisateur
 
+### Administration Super Admin (Nouveau)
+- `GET /api/admin/organizations` - Liste toutes les organisations (super_admin uniquement)
+- `GET /api/admin/organizations/:id/stats` - Statistiques d'une organisation
+- `PATCH /api/admin/organizations/:id` - Modifier organisation (gérant, abonnement)
+
 ### Autres endpoints
 - Clients, Carburant, Maintenance, Transactions, Factures (tous implémentés)
 
 ## Changements Récents (Octobre 2024)
 
-### Session Actuelle - Design Responsive Mobile/Tablette (Octobre 22, 2024)
+### Session Actuelle - Administration Organisations Super Admin (Octobre 28, 2024)
+1. ✅ **Extension schéma organizations** - Ajout champs gérant (nom, prénom, email, téléphone) et abonnement (dates début/fin, statut)
+2. ✅ **Routes API admin** - Endpoints `/api/admin/organizations` protégés par middleware `isSuperAdmin`
+3. ✅ **Page admin organisations** - `/admin/organisations` avec tableau TanStack, stats, dialog édition
+4. ✅ **Système d'alertes** - Composant `SubscriptionAlerts` affichant organisations expirant dans 30 jours
+5. ✅ **Navigation conditionnelle** - Section "Super Admin" dans sidebar visible uniquement pour super_admin
+6. ✅ **Sécurité renforcée** - Middleware `isSuperAdmin` vérifie `user.role === 'super_admin'`
+7. ✅ **Validation architecte** - Implémentation validée comme sécurisée et fonctionnelle
+
+### Session Précédente - Design Responsive Mobile/Tablette (Octobre 22, 2024)
 1. ✅ **Layout principal responsive** - Padding adaptatif `px-4 sm:px-6 lg:px-8 py-4 sm:py-6`
 2. ✅ **Headers de pages responsive** - Layout flex-col sur mobile → flex-row sur desktop
 3. ✅ **DataTable mobile-friendly** - Scroll horizontal avec `overflow-x-auto` + pagination responsive
@@ -189,14 +213,16 @@ Chaque table (sauf `users` et `organizations`) contient un champ `organizationId
 - `/` - Landing page (non auth) ou Dashboard (auth)
 - `/vehicules` - Gestion des véhicules
 - `/chauffeurs` - Gestion des chauffeurs
+- `/admin/organisations` - Administration des organisations (super_admin uniquement)
 
 ### Composants Clés
-- `AppSidebar` - Navigation principale
+- `AppSidebar` - Navigation principale avec section Super Admin conditionnelle
 - `DataTable` - Tableau réutilisable avec recherche, tri, pagination (TanStack Table)
 - `AddVehicleDialog`, `AddDriverDialog`, etc. - Dialogues d'ajout d'entités
 - `EditVehicleDialog`, `EditDriverDialog`, etc. - Dialogues de modification
 - `StatCard` - Carte statistique pour KPIs
 - `MaintenanceAlert` - Alerte d'entretien
+- `SubscriptionAlerts` - Alertes abonnements expirant (dashboard super_admin)
 
 ## Configuration
 - Port: 5000 (frontend + backend)
