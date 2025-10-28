@@ -49,15 +49,15 @@ function Router() {
       
       {!isAuthenticated ? (
         <Route path="/" component={Landing} />
-      ) : user?.role === "super_admin" ? (
-        /* Super Admin - Accès uniquement à la gestion des organisations */
-        <>
-          <Route path="/" component={AdminOrganisations} />
-          <Route path="/admin/organisations" component={AdminOrganisations} />
-        </>
       ) : (
-        /* Utilisateurs normaux - Accès aux fonctionnalités de gestion du parc */
+        /* Utilisateurs authentifiés - Accès à toutes les fonctionnalités */
         <>
+          {/* Routes Super Admin */}
+          {user?.role === "super_admin" && (
+            <Route path="/admin/organisations" component={AdminOrganisations} />
+          )}
+          
+          {/* Routes principales accessibles à tous */}
           <Route path="/" component={Dashboard} />
           <Route path="/vehicules" component={Vehicules} />
           <Route path="/chauffeurs" component={Chauffeurs} />
