@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Car, Users, Wrench, Fuel, Wallet, TrendingUp, Shield, Clock } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Landing() {
   return (
@@ -184,6 +185,18 @@ export default function Landing() {
               </Button>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Footer with admin setup link */}
+        <div className="mt-12 text-center">
+          <p className="text-xs text-muted-foreground">
+            FleetPro © 2024 - Gestion de Parc Automobile
+          </p>
+          <Link href="/admin/setup">
+            <button className="text-xs text-muted-foreground hover:text-foreground mt-2 underline" data-testid="link-admin-setup">
+              Configuration administrateur
+            </button>
+          </Link>
         </div>
       </div>
     </div>

@@ -590,6 +590,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Promote user to super_admin (accessible without auth for setup purposes)
+  app.post("/api/admin/promote", async (req: any, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email requis" });
+      }
+
+      const user = await storage.promoteUserToSuperAdmin(email);
+      
+      if (!user) {
+        return res.status(404).json({ message: "Utilisateur non trouvé" });
+      }
+
+      res.json({ 
+        message: "Utilisateur promu en super_admin avec succès",
+        user: {
+          id: user.id,
+          email: user.email,
+          nom: user.nom,
+          prenom: user.prenom,
+          role: user.role,
+        }
+      });
+    } catch (error) {
+      console.error("Error promoting user:", error);
+      res.status(500).json({ message: "Erreur lors de la promotion de l'utilisateur" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

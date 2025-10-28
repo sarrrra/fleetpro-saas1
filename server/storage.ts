@@ -101,6 +101,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUserRole(userId: string, organizationId: string, role: string): Promise<User>;
   deleteUser(userId: string, organizationId: string): Promise<void>;
+  promoteUserToSuperAdmin(email: string): Promise<User | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -372,6 +373,15 @@ export class DatabaseStorage implements IStorage {
 
   async deleteUser(userId: string, organizationId: string): Promise<void> {
     await db.delete(users).where(and(eq(users.id, userId), eq(users.organizationId, organizationId)));
+  }
+
+  async promoteUserToSuperAdmin(email: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ role: "super_admin" })
+      .where(eq(users.email, email))
+      .returning();
+    return user;
   }
 }
 
