@@ -21,6 +21,7 @@ import Administration from "@/pages/administration";
 import Personnalisation from "@/pages/personnalisation";
 import AdminOrganisations from "@/pages/admin/organisations";
 import AdminSetup from "@/pages/admin-setup";
+import InvitationPage from "@/pages/invitation";
 import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 
@@ -42,6 +43,9 @@ function Router() {
     <Switch>
       {/* Admin setup page - accessible without auth */}
       <Route path="/admin/setup" component={AdminSetup} />
+      
+      {/* Invitation page - accessible without auth */}
+      <Route path="/invitation/:token" component={InvitationPage} />
       
       {!isAuthenticated ? (
         <Route path="/" component={Landing} />
