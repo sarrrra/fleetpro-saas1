@@ -9,6 +9,7 @@ import { Link } from "wouter";
 
 export default function AdminSetup() {
   const [email, setEmail] = useState("");
+  const [securityCode, setSecurityCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const { toast } = useToast();
@@ -16,10 +17,10 @@ export default function AdminSetup() {
   const handlePromote = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email) {
+    if (!email || !securityCode) {
       toast({
         title: "Erreur",
-        description: "Veuillez saisir une adresse email",
+        description: "Veuillez remplir tous les champs",
         variant: "destructive",
       });
       return;
@@ -34,7 +35,7 @@ export default function AdminSetup() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, securityCode }),
       });
 
       const data = await response.json();
@@ -49,6 +50,7 @@ export default function AdminSetup() {
         description: `L'utilisateur ${email} a été promu en super_admin`,
       });
       setEmail("");
+      setSecurityCode("");
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -110,6 +112,23 @@ export default function AdminSetup() {
                   />
                   <p className="text-xs text-muted-foreground">
                     L'utilisateur doit déjà avoir créé un compte en se connectant au moins une fois.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="securityCode">Code de sécurité</Label>
+                  <Input
+                    id="securityCode"
+                    type="password"
+                    placeholder="Code secret d'administration"
+                    value={securityCode}
+                    onChange={(e) => setSecurityCode(e.target.value)}
+                    disabled={isLoading}
+                    data-testid="input-security-code"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Saisissez le code de sécurité défini dans les variables d'environnement.
                   </p>
                 </div>
 
