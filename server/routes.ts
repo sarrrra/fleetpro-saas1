@@ -555,7 +555,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/admin/organizations/:id", isAuthenticated, isSuperAdmin, async (req: any, res) => {
     try {
-      const organization = await storage.updateOrganization(req.params.id, req.body);
+      const updateData = { ...req.body };
+      
+      // Convert date strings to Date objects if present
+      if (updateData.dateDebutAbonnement && typeof updateData.dateDebutAbonnement === 'string') {
+        updateData.dateDebutAbonnement = new Date(updateData.dateDebutAbonnement);
+      }
+      if (updateData.dateFinAbonnement && typeof updateData.dateFinAbonnement === 'string') {
+        updateData.dateFinAbonnement = new Date(updateData.dateFinAbonnement);
+      }
+      
+      const organization = await storage.updateOrganization(req.params.id, updateData);
       res.json(organization);
     } catch (error) {
       console.error("Error updating organization:", error);
