@@ -47,7 +47,7 @@ export const users = pgTable("users", {
   organizationId: varchar("organization_id").references(() => organizations.id),
   nom: text("nom"),
   prenom: text("prenom"),
-  email: text("email").notNull().unique(),
+  email: text("email").notNull(),
   telephone: text("telephone"),
   role: userRoleEnum("role").notNull().default("gestionnaire"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

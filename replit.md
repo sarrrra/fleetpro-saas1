@@ -1,278 +1,51 @@
 # FleetPro - Application SaaS B2B de Gestion de Parc Automobile
 
-## Vue d'ensemble
-FleetPro est une application web multi-tenant permettant aux entreprises de gérer leur parc automobile (voitures, utilitaires, camions, bus, engins). L'application supporte la gestion de véhicules, chauffeurs, clients, suivi de carburant, planification de maintenance, trésorerie et facturation.
+## Overview
+FleetPro is a multi-tenant web application designed for businesses to manage their vehicle fleets (cars, utility vehicles, trucks, buses, heavy machinery). It supports comprehensive management of vehicles, drivers, clients, fuel tracking, maintenance planning, treasury, and invoicing. The project aims to provide a robust, scalable, and user-friendly solution for fleet management, enhancing operational efficiency and financial tracking for businesses.
 
-## Architecture Technique
+## User Preferences
+Je préfère des explications claires et simples. J'aime le développement itératif et veux être consulté avant des changements architecturaux majeurs. Je valorise les explications détaillées pour les fonctionnalités complexes. Assurez des tests robustes et maintenez un haut standard de qualité de code.
 
-### Stack Technologique
-- **Frontend**: React 18 + TypeScript avec Vite
+## System Architecture
+
+### Technical Stack
+- **Frontend**: React 18 + TypeScript with Vite
 - **Backend**: Express.js + Node.js
-- **Base de données**: PostgreSQL (Neon) avec Drizzle ORM
-- **Authentification**: Replit Auth (OpenID Connect)
+- **Database**: PostgreSQL with Drizzle ORM
+- **Authentication**: Replit Auth (OpenID Connect)
 - **UI**: Shadcn/UI + Tailwind CSS + Dark mode
 - **State Management**: TanStack Query v5
 
-### Architecture Multi-Tenant
-L'application utilise une architecture multi-tenant avec isolation complète des données au niveau de l'organisation:
-- Chaque utilisateur appartient à une organisation (tenant)
-- Toutes les requêtes API filtrent automatiquement par `organizationId`
-- Les rôles utilisateur: `super_admin`, `admin_entreprise`, `gestionnaire`, `chauffeur`
+### Multi-Tenant Architecture
+The application employs a multi-tenant architecture with complete data isolation per organization:
+- Each user belongs to an organization (tenant).
+- All API requests automatically filter by `organizationId`.
+- User roles include: `super_admin`, `admin_entreprise`, `gestionnaire`, `chauffeur`.
 
-## Structure de la Base de Données
+### Database Schema
+Key tables include: `organizations`, `users`, `invitations`, `vehicles`, `drivers`, `clients`, `fuel_records`, `maintenance_records`, `transactions`, `invoices`, `organization_settings`, and `sessions`. Data isolation is ensured by an `organizationId` field in most tables.
 
-### Tables Principales
-1. **organizations** - Organisations/tenants (entreprises clientes)
-2. **users** - Utilisateurs avec rôles et lien vers Replit Auth
-3. **vehicles** - Véhicules du parc automobile
-4. **drivers** - Chauffeurs
-5. **clients** - Clients (pour agences de location)
-6. **fuel_records** - Enregistrements de carburant
-7. **maintenance_records** - Planification et suivi d'entretien
-8. **transactions** - Transactions financières (recettes/dépenses)
-9. **invoices** - Factures clients
-10. **organization_settings** - Paramètres et personnalisation des organisations
-11. **sessions** - Sessions utilisateur (Replit Auth)
+### UI/UX Decisions
+- Interactive tables with search, sort, and pagination (TanStack Table).
+- Responsive design for mobile and tablet devices.
+- Consistent French language interface with dark mode support.
+- Colored badges for status indications (e.g., maintenance urgency, client balance).
 
-### Isolation des Données
-Chaque table (sauf `users` et `organizations`) contient un champ `organizationId` pour garantir l'isolation des données entre tenants.
+### Feature Specifications
+- **Authentication**: Secure login via Replit Auth, session management, auto-organization creation, protected API routes, and an invitation system for new administrators.
+- **Dashboard**: Real-time KPIs, urgent alerts, and recent activity overview.
+- **CRUD Operations**: Comprehensive creation, reading, updating, and deletion for vehicles, drivers, clients, fuel records, maintenance schedules, financial transactions, and invoices.
+- **Configuration**: Company settings, user and role administration, and UI customization.
+- **Super Admin Module**: Global organization management, subscription tracking, and granular feature flag control per organization.
+- **Invitation System**: Secure, token-based invitation flow for new administrators with automatic user-organization association post-login.
 
-## Fonctionnalités Implémentées
+### System Design Choices
+- **Data Isolation**: `organizationId` is central to ensuring tenant data separation.
+- **Role-Based Access Control (RBAC)**: Middleware (`isAuthenticated`, `isSuperAdmin`) enforces access policies.
+- **Feature Flags**: Granular control over features per organization via `organization_settings`.
+- **Scalability**: Designed to support multiple tenants with isolated data.
 
-### Authentification
-- ✅ Connexion via Replit Auth (Google, GitHub, Email)
-- ✅ Gestion de session avec PostgreSQL
-- ✅ Auto-création d'organisation au premier login
-- ✅ Protection des routes API avec `isAuthenticated` middleware
-- ✅ Rafraîchissement automatique des tokens
-
-### Dashboard
-- ✅ KPIs en temps réel (véhicules actifs, chauffeurs, entretiens, revenus)
-- ✅ Alertes d'entretien urgent/bientôt
-- ✅ Véhicules récents
-- ✅ Interface French/Dark mode
-
-### Gestion des Véhicules
-- ✅ **Tableau interactif** avec recherche, tri, pagination (TanStack Table)
-- ✅ Colonnes: Marque, Modèle, Type, Immatriculation, Kilométrage, Statut, Actions
-- ✅ Actions inline: Modifier, Supprimer (avec confirmation)
-- ✅ Ajout de véhicule (marque, modèle, type, kilométrage, heures)
-- ✅ Statuts: disponible, en_location, en_maintenance, hors_service
-- ✅ Types: voiture, utilitaire, camion, bus, engin
-
-### Gestion des Chauffeurs
-- ✅ **Tableau interactif** avec recherche, tri, pagination
-- ✅ Colonnes: Nom, Prénom, Téléphone, Véhicule Assigné, Actions
-- ✅ Actions inline: Modifier, Supprimer (avec confirmation)
-- ✅ CRUD complet avec assignation véhicule
-
-### Gestion des Clients
-- ✅ **Tableau interactif** avec recherche, tri, pagination
-- ✅ Colonnes: Nom, Entreprise, Téléphone, Email, Solde, Actions
-- ✅ Actions inline: Modifier, Supprimer (avec confirmation)
-- ✅ CRUD complet avec suivi de solde
-- ✅ Badge coloré pour solde positif/négatif
-
-### Suivi Carburant
-- ✅ **Tableau interactif** avec recherche, tri, pagination
-- ✅ Colonnes: Date, Véhicule, Chauffeur, Kilométrage, Quantité, Prix/L, Coût Total
-- ✅ Statistiques en temps réel (coût total, quantité totale, prix moyen/L)
-- ✅ Enregistrements avec détails complets
-
-### Planification Maintenance
-- ✅ **Tableau interactif** avec recherche, tri, pagination
-- ✅ Colonnes: Véhicule, Type, Date Prévue, Kilométrage, Urgence, Coût
-- ✅ Badges colorés par urgence (urgent/bientôt/planifié/terminé)
-- ✅ Statistiques en temps réel (planifiés, bientôt, urgent, terminés)
-- ✅ Création avec urgence et suivi par kilométrage/heures
-
-### Trésorerie
-- ✅ **Tableau interactif** avec recherche, tri, pagination
-- ✅ Colonnes: Date, Type, Catégorie, Véhicule, Client, Montant
-- ✅ Badges colorés par type (recette/dépense)
-- ✅ Statistiques en temps réel (recettes, dépenses, solde)
-- ✅ Transactions recettes/dépenses avec catégories
-
-### Facturation
-- ✅ **Tableau interactif** avec recherche, tri, pagination
-- ✅ Colonnes: N° Facture, Client, Date, Échéance, Montant Total, Montant Payé, Statut
-- ✅ Badges colorés par statut (impayée/partielle/payée)
-- ✅ Statistiques en temps réel (montant total, montant payé, en attente, impayées)
-- ✅ Factures avec échéances et suivi paiements
-
-### Configuration
-- ✅ **Paramètres entreprise** - Registre commerce, NIS, NIF, article imposition, adresse
-- ✅ **Administration** - Gestion utilisateurs et rôles
-- ✅ **Personnalisation** - Couleurs thème, logo entreprise
-
-### Administration Super Admin (Nouveau - Octobre 28, 2024)
-- ✅ **Gestion des Organisations** - Tableau TanStack avec toutes les organisations clientes
-- ✅ **Informations Gérant** - Nom, prénom, email, téléphone du gérant
-- ✅ **Gestion Abonnements** - Dates début/fin, statut (actif/expiré/suspendu)
-- ✅ **Statistiques Globales** - Total organisations, actives, expirées, suspendues
-- ✅ **Alertes Abonnements** - Notifications 30 jours avant expiration
-- ✅ **Édition Organisations** - Dialog pour modifier infos gérant et abonnement
-- ✅ **Protection Routes** - Middleware `isSuperAdmin` pour sécuriser l'accès
-- ✅ **Navigation Conditionnelle** - Section "Super Admin" visible uniquement pour super_admin
-
-### Pages Principales
-- ✅ Landing page (non authentifié)
-- ✅ Dashboard (authentifié)
-- ✅ Véhicules, Chauffeurs, Clients
-- ✅ Carburant, Maintenance, Trésorerie, Factures
-- ✅ Paramètres, Administration, Personnalisation
-
-## API Routes
-
-### Authentification
-- `GET /api/auth/user` - Récupérer l'utilisateur connecté
-- `GET /api/login` - Initier le login Replit
-- `GET /api/logout` - Se déconnecter
-- `GET /api/callback` - Callback OAuth
-
-### Véhicules
-- `GET /api/vehicles` - Liste des véhicules (filtré par org)
-- `POST /api/vehicles` - Créer un véhicule
-- `PATCH /api/vehicles/:id` - Modifier un véhicule
-- `DELETE /api/vehicles/:id` - Supprimer un véhicule
-
-### Chauffeurs
-- `GET /api/drivers` - Liste des chauffeurs
-- `POST /api/drivers` - Créer un chauffeur
-- `PATCH /api/drivers/:id` - Modifier un chauffeur
-- `DELETE /api/drivers/:id` - Supprimer un chauffeur
-
-### Dashboard
-- `GET /api/dashboard/stats` - Statistiques du dashboard
-
-### Configuration
-- `GET /api/settings` - Récupérer paramètres organisation
-- `PUT /api/settings` - Modifier paramètres organisation
-- `GET /api/users` - Liste utilisateurs organisation
-- `PATCH /api/users/:id` - Modifier rôle utilisateur
-- `DELETE /api/users/:id` - Supprimer utilisateur
-
-### Administration Super Admin (Nouveau)
-- `GET /api/admin/organizations` - Liste toutes les organisations (super_admin uniquement)
-- `GET /api/admin/organizations/:id/stats` - Statistiques d'une organisation
-- `PATCH /api/admin/organizations/:id` - Modifier organisation (gérant, abonnement)
-- `GET /api/admin/organizations/:id/settings` - Récupérer feature flags (avec auto-persistance defaults)
-- `PATCH /api/admin/organizations/:id/settings` - Mettre à jour feature flags (validation allowlist)
-
-### Autres endpoints
-- Clients, Carburant, Maintenance, Transactions, Factures (tous implémentés)
-
-## Changements Récents (Octobre 2024)
-
-### Session Actuelle - Feature Flags & Isolation Super Admin (Octobre 28, 2024)
-1. ✅ **Système de Feature Flags** - Contrôle granulaire des fonctionnalités par organisation
-   - Colonne `enabledFeatures` (JSONB array) dans `organization_settings`
-   - 7 fonctionnalités contrôlables: vehicles, drivers, clients, fuel, maintenance, treasury, invoices
-   - Par défaut toutes activées, modifiables via dialog d'édition
-2. ✅ **Validation & Sécurité Backend**
-   - Validation Zod des enabledFeatures (allowlist stricte)
-   - Auto-persistance des defaults lors du premier GET
-   - Protection middleware `isSuperAdmin` sur toutes les routes admin
-3. ✅ **UI d'Édition Feature Flags** 
-   - Section "Fonctionnalités Activées" dans dialog d'édition organisations
-   - Checkboxes interactives pour activer/désactiver les fonctionnalités
-   - Séquencement correct : dialog ne se ferme qu'après succès complet (org + settings)
-4. ✅ **Isolation Complète Super Admin**
-   - Interface dédiée : sidebar affiche UNIQUEMENT "Administration Globale"
-   - Auto-redirection vers `/admin/organisations`
-   - Aucun accès aux fonctionnalités opérationnelles (véhicules, chauffeurs, etc.)
-5. ✅ **Tests End-to-End Validés**
-   - Scénario super_admin : interface isolée, feature flags modifiables
-   - Scénario utilisateur normal : toutes fonctionnalités visibles, pas d'accès admin
-   - Validation architecte : sécurité et fonctionnalité confirmées
-
-### Session Précédente - Design Responsive Mobile/Tablette (Octobre 22, 2024)
-1. ✅ **Layout principal responsive** - Padding adaptatif `px-4 sm:px-6 lg:px-8 py-4 sm:py-6`
-2. ✅ **Headers de pages responsive** - Layout flex-col sur mobile → flex-row sur desktop
-3. ✅ **DataTable mobile-friendly** - Scroll horizontal avec `overflow-x-auto` + pagination responsive
-4. ✅ **Grilles de statistiques adaptatives** - 1 colonne mobile → 2-4 colonnes desktop selon contexte
-5. ✅ **Boutons adaptatifs** - Texte court sur mobile (`hidden xs:inline`) → texte complet sur desktop
-6. ✅ **Sidebar auto-collapse** - Collapsed sur mobile, expanded sur desktop via SidebarProvider
-7. ✅ **Breakpoints Tailwind** - sm:640px, md:768px, lg:1024px utilisés de manière cohérente
-8. ✅ **Tests E2E responsive** - Validé sur 5 tailles d'écran (375px, 428px, 768px, 1280px, 1920px)
-9. ✅ **8 pages responsive** - Dashboard, Véhicules, Chauffeurs, Clients, Carburant, Maintenance, Trésorerie, Factures
-
-### Session Précédente - Conversion en Tableaux (Octobre 22, 2024)
-1. ✅ Création composant DataTable réutilisable avec TanStack Table
-2. ✅ Conversion de toutes les pages en vue tableau avec recherche, tri et pagination
-3. ✅ Pages converties : Véhicules, Chauffeurs, Clients, Carburant, Maintenance, Trésorerie, Factures
-4. ✅ Actions inline (modifier/supprimer) avec AlertDialog de confirmation
-5. ✅ Tests end-to-end validés pour toutes les vues tableau
-
-### Session Précédente (Octobre 2024)
-1. ✅ Tous les 7 modules opérationnels complétés
-2. ✅ Module Configuration ajouté (Paramètres, Administration, Personnalisation)
-3. ✅ Tests end-to-end Playwright validés pour tous les modules
-4. ✅ Corrections bugs : routes /entretien, validation dates, SelectItem vides
-5. ✅ Table organization_settings créée avec infos légales et personnalisation
-
-### Modules Complets
-- ✅ Véhicules, Chauffeurs, Clients (CRUD complet avec tableaux interactifs)
-- ✅ Carburant, Maintenance, Trésorerie, Factures (tableaux interactifs + statistiques)
-- ✅ Configuration : Paramètres entreprise, Administration utilisateurs, Personnalisation thème
-
-## Comment devenir Super Admin
-
-### Méthode 1 : Via la Page de Configuration (Recommandé)
-1. **Créez d'abord un compte** : Connectez-vous une fois à l'application via Replit Auth
-2. **Accédez à la page de setup** : Depuis la landing page, cliquez sur "Configuration administrateur" (en bas de page)
-3. **Saisissez vos informations** :
-   - Email de l'utilisateur à promouvoir
-   - Code de sécurité (défini dans `ADMIN_SETUP_CODE`)
-4. **Validez** : L'utilisateur sera immédiatement promu en super_admin
-
-### Méthode 2 : Via la Base de Données
-1. Connectez-vous à Drizzle Studio : `npm run db:studio`
-2. Trouvez votre utilisateur dans la table `users`
-3. Changez le champ `role` de `admin_entreprise` à `super_admin`
-4. Rafraîchissez la page de l'application
-
-### Code de Sécurité
-- **Variable d'environnement** : `ADMIN_SETUP_CODE`
-- **Utilisation** : Requis pour promouvoir un utilisateur via `/admin/setup`
-- **Sécurité** : 
-  - Gardez ce code secret - seuls ceux qui le connaissent peuvent créer des super_admin
-  - Protection anti-brute-force : Maximum 5 tentatives par IP/email
-  - Blocage de 15 minutes après 5 échecs consécutifs
-  - Tous les échecs sont enregistrés dans les logs serveur
-
-## Prochaines Étapes
-1. 🔄 Optimisations UX (modals, toasts)
-2. 🔄 Rapports et exports PDF
-3. 🔄 Notifications et alertes
-4. 🔄 Dashboard analytics avancé
-
-## Navigation de l'Application
-
-### Routes Frontend
-- `/` - Landing page (non auth) ou Dashboard (auth)
-- `/vehicules` - Gestion des véhicules
-- `/chauffeurs` - Gestion des chauffeurs
-- `/admin/organisations` - Administration des organisations (super_admin uniquement)
-
-### Composants Clés
-- `AppSidebar` - Navigation principale avec section Super Admin conditionnelle
-- `DataTable` - Tableau réutilisable avec recherche, tri, pagination (TanStack Table)
-- `AddVehicleDialog`, `AddDriverDialog`, etc. - Dialogues d'ajout d'entités
-- `EditVehicleDialog`, `EditDriverDialog`, etc. - Dialogues de modification
-- `StatCard` - Carte statistique pour KPIs
-- `MaintenanceAlert` - Alerte d'entretien
-- `SubscriptionAlerts` - Alertes abonnements expirant (dashboard super_admin)
-
-## Configuration
-- Port: 5000 (frontend + backend)
-- Base de données: PostgreSQL via `DATABASE_URL`
-- Session: Stockée en PostgreSQL (`SESSION_SECRET`)
-- Thème: Dark mode par défaut
-
-## Commandes Utiles
-```bash
-npm run dev          # Démarrer l'application
-npm run db:push      # Synchroniser le schéma DB
-npm run db:studio    # Ouvrir Drizzle Studio
-```
+## External Dependencies
+- **Replit Auth**: Primary authentication and identity provider using OpenID Connect.
+- **Neon (PostgreSQL)**: Managed PostgreSQL database service.
+- **Drizzle ORM**: Type-safe ORM used for interacting with the PostgreSQL database.
