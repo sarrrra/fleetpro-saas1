@@ -590,21 +590,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Promote user to super_admin (accessible without auth for setup purposes)
+  // Rate limiting for promotion attempts (IP-based to prevent email rotation bypass)
+  const promotionAttempts = new Map<string, { count: number; firstAttempt: number }>();
+  const MAX_ATTEMPTS = 5;
+  const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
+
+  // Promote user to super_admin (secured with ADMIN_SETUP_CODE + IP-based rate limiting)
   app.post("/api/admin/promote", async (req: any, res) => {
     try {
-      const { email } = req.body;
+      const { email, securityCode } = req.body;
       
-      if (!email) {
-        return res.status(400).json({ message: "Email requis" });
+      if (!email || !securityCode) {
+        return res.status(400).json({ message: "Email et code de sécurité requis" });
       }
 
+      // IP-based rate limiting (prevents bypass by rotating emails)
+      const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+      const now = Date.now();
+      
+      const attempts = promotionAttempts.get(clientIp);
+      if (attempts) {
+        // Check if lockout period has expired
+        if (now - attempts.firstAttempt > LOCKOUT_DURATION) {
+          promotionAttempts.delete(clientIp);
+        } else if (attempts.count >= MAX_ATTEMPTS) {
+          const remainingTime = Math.ceil((LOCKOUT_DURATION - (now - attempts.firstAttempt)) / 60000);
+          console.warn(`Promotion locked for IP ${clientIp} - too many attempts`);
+          return res.status(429).json({ 
+            message: `Trop de tentatives. Réessayez dans ${remainingTime} minute(s).` 
+          });
+        }
+      }
+
+      // Verify security code FIRST (before any database operations)
+      const adminSetupCode = process.env.ADMIN_SETUP_CODE;
+      if (!adminSetupCode) {
+        console.error("ADMIN_SETUP_CODE not configured");
+        return res.status(500).json({ message: "Configuration serveur manquante" });
+      }
+
+      if (securityCode !== adminSetupCode) {
+        // Track failed attempt
+        if (attempts) {
+          attempts.count++;
+        } else {
+          promotionAttempts.set(clientIp, { count: 1, firstAttempt: now });
+        }
+        
+        const attemptCount = (attempts?.count || 0) + 1;
+        console.warn(`Failed promotion attempt ${attemptCount}/${MAX_ATTEMPTS} for ${email} from ${clientIp} - invalid code`);
+        
+        // Return same error for both invalid code and non-existent user to prevent information leakage
+        return res.status(403).json({ message: "Email ou code de sécurité incorrect" });
+      }
+
+      // ONLY promote if code is correct
       const user = await storage.promoteUserToSuperAdmin(email);
       
       if (!user) {
-        return res.status(404).json({ message: "Utilisateur non trouvé" });
+        // User doesn't exist - use same error message to prevent info leak
+        console.warn(`Promotion failed for ${email} from ${clientIp} - user not found`);
+        return res.status(403).json({ message: "Email ou code de sécurité incorrect" });
       }
 
+      // Clear attempts on success
+      promotionAttempts.delete(clientIp);
+
+      console.log(`User ${email} promoted to super_admin successfully from ${clientIp}`);
       res.json({ 
         message: "Utilisateur promu en super_admin avec succès",
         user: {

@@ -201,6 +201,31 @@ Chaque table (sauf `users` et `organizations`) contient un champ `organizationId
 - ✅ Carburant, Maintenance, Trésorerie, Factures (tableaux interactifs + statistiques)
 - ✅ Configuration : Paramètres entreprise, Administration utilisateurs, Personnalisation thème
 
+## Comment devenir Super Admin
+
+### Méthode 1 : Via la Page de Configuration (Recommandé)
+1. **Créez d'abord un compte** : Connectez-vous une fois à l'application via Replit Auth
+2. **Accédez à la page de setup** : Depuis la landing page, cliquez sur "Configuration administrateur" (en bas de page)
+3. **Saisissez vos informations** :
+   - Email de l'utilisateur à promouvoir
+   - Code de sécurité (défini dans `ADMIN_SETUP_CODE`)
+4. **Validez** : L'utilisateur sera immédiatement promu en super_admin
+
+### Méthode 2 : Via la Base de Données
+1. Connectez-vous à Drizzle Studio : `npm run db:studio`
+2. Trouvez votre utilisateur dans la table `users`
+3. Changez le champ `role` de `admin_entreprise` à `super_admin`
+4. Rafraîchissez la page de l'application
+
+### Code de Sécurité
+- **Variable d'environnement** : `ADMIN_SETUP_CODE`
+- **Utilisation** : Requis pour promouvoir un utilisateur via `/admin/setup`
+- **Sécurité** : 
+  - Gardez ce code secret - seuls ceux qui le connaissent peuvent créer des super_admin
+  - Protection anti-brute-force : Maximum 5 tentatives par IP/email
+  - Blocage de 15 minutes après 5 échecs consécutifs
+  - Tous les échecs sont enregistrés dans les logs serveur
+
 ## Prochaines Étapes
 1. 🔄 Optimisations UX (modals, toasts)
 2. 🔄 Rapports et exports PDF
