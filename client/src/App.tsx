@@ -25,7 +25,7 @@ import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -45,7 +45,14 @@ function Router() {
       
       {!isAuthenticated ? (
         <Route path="/" component={Landing} />
+      ) : user?.role === "super_admin" ? (
+        /* Super Admin - Accès uniquement à la gestion des organisations */
+        <>
+          <Route path="/" component={AdminOrganisations} />
+          <Route path="/admin/organisations" component={AdminOrganisations} />
+        </>
       ) : (
+        /* Utilisateurs normaux - Accès aux fonctionnalités de gestion du parc */
         <>
           <Route path="/" component={Dashboard} />
           <Route path="/vehicules" component={Vehicules} />
@@ -58,7 +65,6 @@ function Router() {
           <Route path="/parametres" component={Parametres} />
           <Route path="/administration" component={Administration} />
           <Route path="/personnalisation" component={Personnalisation} />
-          <Route path="/admin/organisations" component={AdminOrganisations} />
         </>
       )}
       <Route component={NotFound} />
