@@ -25,10 +25,14 @@ import {
   Building2,
   LogOut,
   UserRoundCog,
+  ArrowLeft,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -84,6 +88,35 @@ const menuItems = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
+  const { toast } = useToast();
+
+  const switchBackMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/admin/switch-back", {});
+    },
+    onSuccess: () => {
+      toast({
+        title: "Retour au mode Super Admin",
+        description: "Vous êtes de nouveau en mode Super Admin",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      window.location.href = "/admin/organisations";
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Échec du retour au mode Super Admin",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSwitchBack = () => {
+    switchBackMutation.mutate();
+  };
+
+  // Super admin connecté à une organisation
+  const isSuperAdminInOrg = user?.role === "super_admin" && user?.organizationId;
 
   return (
     <Sidebar>
@@ -99,7 +132,24 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        {user?.role === "super_admin" ? (
+        {/* Bouton de retour pour super_admin connecté à une organisation */}
+        {isSuperAdminInOrg && (
+          <SidebarGroup>
+            <SidebarGroupContent className="p-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-2"
+                onClick={handleSwitchBack}
+                data-testid="button-switch-back-super-admin"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Retour Mode Super Admin</span>
+              </Button>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {user?.role === "super_admin" && !user?.organizationId ? (
           /* Super Admin - Vue dédiée uniquement à la gestion des organisations */
           <SidebarGroup>
             <SidebarGroupLabel>Administration Globale</SidebarGroupLabel>

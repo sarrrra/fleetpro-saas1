@@ -757,6 +757,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Switch to organization (super_admin only)
+  app.post("/api/admin/switch-to-organization/:id", isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    try {
+      const orgId = req.params.id;
+      const user = req.currentUser;
+      
+      // Vérifier que l'organisation existe
+      const org = await storage.getOrganizationById(orgId);
+      if (!org) {
+        return res.status(404).json({ message: "Organisation introuvable" });
+      }
+      
+      // Mettre à jour l'organizationId du super_admin tout en conservant son rôle
+      await db
+        .update(users)
+        .set({
+          organizationId: orgId,
+        })
+        .where(eq(users.id, user.id));
+      
+      res.json({ message: "Connecté à l'organisation avec succès" });
+    } catch (error) {
+      console.error("Error switching to organization:", error);
+      res.status(500).json({ message: "Erreur lors de la connexion à l'organisation" });
+    }
+  });
+
+  // Switch back to super admin mode (remove organization association)
+  app.post("/api/admin/switch-back", isAuthenticated, async (req: any, res) => {
+    try {
+      const replitAuthId = req.user.claims.sub;
+      const user = await storage.getUserByReplitAuthId(replitAuthId);
+      
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      // Retirer l'organizationId pour revenir en mode super_admin pur
+      await db
+        .update(users)
+        .set({
+          organizationId: null,
+        })
+        .where(eq(users.id, user.id));
+      
+      res.json({ message: "Retour au mode super admin" });
+    } catch (error) {
+      console.error("Error switching back to super admin:", error);
+      res.status(500).json({ message: "Erreur lors du retour au mode super admin" });
+    }
+  });
+
   // Rate limiting for promotion attempts (IP-based to prevent email rotation bypass)
   const promotionAttempts = new Map<string, { count: number; firstAttempt: number }>();
   const MAX_ATTEMPTS = 5;

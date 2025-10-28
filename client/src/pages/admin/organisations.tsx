@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Building2, Users, AlertTriangle, CheckCircle, Edit, Car, UserCircle, Fuel, Wrench, Wallet, FileText, Mail, Copy, Check } from "lucide-react";
+import { Building2, Users, AlertTriangle, CheckCircle, Edit, Car, UserCircle, Fuel, Wrench, Wallet, FileText, Mail, Copy, Check, LogIn } from "lucide-react";
 import { type ColumnDef } from "@tanstack/react-table";
 import { type Organization } from "@shared/schema";
 import {
@@ -165,6 +165,31 @@ export default function AdminOrganisations() {
       orgId: invitingOrg.id,
       email: invitationEmail,
     });
+  };
+
+  const switchToOrgMutation = useMutation({
+    mutationFn: async (orgId: string) => {
+      return apiRequest("POST", `/api/admin/switch-to-organization/${orgId}`, {});
+    },
+    onSuccess: () => {
+      toast({
+        title: "Connexion réussie",
+        description: "Vous êtes maintenant connecté à l'organisation",
+      });
+      // Recharger la page pour actualiser l'interface
+      window.location.href = "/";
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Échec de la connexion à l'organisation",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSwitchToOrg = async (orgId: string) => {
+    await switchToOrgMutation.mutateAsync(orgId);
   };
 
   const handleCopyLink = async () => {
@@ -334,6 +359,15 @@ export default function AdminOrganisations() {
       header: "Actions",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleSwitchToOrg(row.original.id)}
+            data-testid={`button-connect-${row.original.id}`}
+            title="Se connecter à cette organisation"
+          >
+            <LogIn className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="sm"
