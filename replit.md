@@ -156,20 +156,35 @@ Chaque table (sauf `users` et `organizations`) contient un champ `organizationId
 - `GET /api/admin/organizations` - Liste toutes les organisations (super_admin uniquement)
 - `GET /api/admin/organizations/:id/stats` - Statistiques d'une organisation
 - `PATCH /api/admin/organizations/:id` - Modifier organisation (gérant, abonnement)
+- `GET /api/admin/organizations/:id/settings` - Récupérer feature flags (avec auto-persistance defaults)
+- `PATCH /api/admin/organizations/:id/settings` - Mettre à jour feature flags (validation allowlist)
 
 ### Autres endpoints
 - Clients, Carburant, Maintenance, Transactions, Factures (tous implémentés)
 
 ## Changements Récents (Octobre 2024)
 
-### Session Actuelle - Administration Organisations Super Admin (Octobre 28, 2024)
-1. ✅ **Extension schéma organizations** - Ajout champs gérant (nom, prénom, email, téléphone) et abonnement (dates début/fin, statut)
-2. ✅ **Routes API admin** - Endpoints `/api/admin/organizations` protégés par middleware `isSuperAdmin`
-3. ✅ **Page admin organisations** - `/admin/organisations` avec tableau TanStack, stats, dialog édition
-4. ✅ **Système d'alertes** - Composant `SubscriptionAlerts` affichant organisations expirant dans 30 jours
-5. ✅ **Navigation conditionnelle** - Section "Super Admin" dans sidebar visible uniquement pour super_admin
-6. ✅ **Sécurité renforcée** - Middleware `isSuperAdmin` vérifie `user.role === 'super_admin'`
-7. ✅ **Validation architecte** - Implémentation validée comme sécurisée et fonctionnelle
+### Session Actuelle - Feature Flags & Isolation Super Admin (Octobre 28, 2024)
+1. ✅ **Système de Feature Flags** - Contrôle granulaire des fonctionnalités par organisation
+   - Colonne `enabledFeatures` (JSONB array) dans `organization_settings`
+   - 7 fonctionnalités contrôlables: vehicles, drivers, clients, fuel, maintenance, treasury, invoices
+   - Par défaut toutes activées, modifiables via dialog d'édition
+2. ✅ **Validation & Sécurité Backend**
+   - Validation Zod des enabledFeatures (allowlist stricte)
+   - Auto-persistance des defaults lors du premier GET
+   - Protection middleware `isSuperAdmin` sur toutes les routes admin
+3. ✅ **UI d'Édition Feature Flags** 
+   - Section "Fonctionnalités Activées" dans dialog d'édition organisations
+   - Checkboxes interactives pour activer/désactiver les fonctionnalités
+   - Séquencement correct : dialog ne se ferme qu'après succès complet (org + settings)
+4. ✅ **Isolation Complète Super Admin**
+   - Interface dédiée : sidebar affiche UNIQUEMENT "Administration Globale"
+   - Auto-redirection vers `/admin/organisations`
+   - Aucun accès aux fonctionnalités opérationnelles (véhicules, chauffeurs, etc.)
+5. ✅ **Tests End-to-End Validés**
+   - Scénario super_admin : interface isolée, feature flags modifiables
+   - Scénario utilisateur normal : toutes fonctionnalités visibles, pas d'accès admin
+   - Validation architecte : sécurité et fonctionnalité confirmées
 
 ### Session Précédente - Design Responsive Mobile/Tablette (Octobre 22, 2024)
 1. ✅ **Layout principal responsive** - Padding adaptatif `px-4 sm:px-6 lg:px-8 py-4 sm:py-6`
