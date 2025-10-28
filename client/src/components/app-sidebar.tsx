@@ -24,6 +24,7 @@ import {
   Palette,
   Building2,
   LogOut,
+  UserRoundCog,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
@@ -213,6 +214,16 @@ export function AppSidebar() {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>Mon Compte</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <a 
+                href="/api/logout" 
+                className="flex items-center cursor-pointer"
+                data-testid="button-switch-user"
+              >
+                <UserRoundCog className="mr-2 h-4 w-4" />
+                <span>Changer d'utilisateur</span>
+              </a>
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <a 
                 href="/api/logout" 
