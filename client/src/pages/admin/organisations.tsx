@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { DataTable } from "@/components/ui/data-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, Users, AlertTriangle, CheckCircle, Edit } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Building2, Users, AlertTriangle, CheckCircle, Edit, Car, UserCircle, Fuel, Wrench, Wallet, FileText } from "lucide-react";
 import { type ColumnDef } from "@tanstack/react-table";
 import { type Organization } from "@shared/schema";
 import {
@@ -42,9 +43,20 @@ interface OrganizationWithStats extends Organization {
   totalUsers?: number;
 }
 
+const AVAILABLE_FEATURES = [
+  { id: "vehicles", label: "Véhicules", icon: Car },
+  { id: "drivers", label: "Chauffeurs", icon: UserCircle },
+  { id: "clients", label: "Clients", icon: Users },
+  { id: "fuel", label: "Carburant", icon: Fuel },
+  { id: "maintenance", label: "Entretien", icon: Wrench },
+  { id: "treasury", label: "Trésorerie", icon: Wallet },
+  { id: "invoices", label: "Factures", icon: FileText },
+] as const;
+
 export default function AdminOrganisations() {
   const { toast } = useToast();
   const [editingOrg, setEditingOrg] = useState<OrganizationWithStats | null>(null);
+  const [enabledFeatures, setEnabledFeatures] = useState<string[]>([]);
 
   const { data: organizations = [], isLoading } = useQuery<OrganizationWithStats[]>({
     queryKey: ["/api/admin/organizations"],
@@ -56,11 +68,6 @@ export default function AdminOrganisations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/organizations"] });
-      toast({
-        title: "Succès",
-        description: "Organisation mise à jour avec succès",
-      });
-      setEditingOrg(null);
     },
     onError: () => {
       toast({
@@ -83,7 +90,7 @@ export default function AdminOrganisations() {
     },
   });
 
-  const handleEdit = (org: OrganizationWithStats) => {
+  const handleEdit = async (org: OrganizationWithStats) => {
     setEditingOrg(org);
     form.reset({
       nomGerant: org.nomGerant || "",
@@ -94,23 +101,69 @@ export default function AdminOrganisations() {
       dateFinAbonnement: org.dateFinAbonnement ? format(new Date(org.dateFinAbonnement), "yyyy-MM-dd") : "",
       statutAbonnement: (org.statutAbonnement as "actif" | "expire" | "suspendu") || "actif",
     });
+
+    // Charger les features activées pour cette organisation
+    try {
+      const response = await fetch(`/api/admin/organizations/${org.id}/settings`);
+      if (response.ok) {
+        const settings = await response.json();
+        setEnabledFeatures(settings.enabledFeatures || AVAILABLE_FEATURES.map(f => f.id));
+      } else {
+        // Par défaut, toutes les features sont activées
+        setEnabledFeatures(AVAILABLE_FEATURES.map(f => f.id));
+      }
+    } catch (error) {
+      console.error("Error loading organization settings:", error);
+      setEnabledFeatures(AVAILABLE_FEATURES.map(f => f.id));
+    }
   };
 
-  const onSubmit = (data: any) => {
+  const onSubmit = async (data: any) => {
     if (!editingOrg) return;
 
-    updateMutation.mutate({
-      id: editingOrg.id,
-      updates: {
-        nomGerant: data.nomGerant,
-        prenomGerant: data.prenomGerant,
-        emailGerant: data.emailGerant,
-        telephoneGerant: data.telephoneGerant,
-        dateDebutAbonnement: data.dateDebutAbonnement ? new Date(data.dateDebutAbonnement) : null,
-        dateFinAbonnement: data.dateFinAbonnement ? new Date(data.dateFinAbonnement) : null,
-        statutAbonnement: data.statutAbonnement,
-      },
-    });
+    try {
+      // Mettre à jour l'organisation ET les feature flags de manière séquentielle
+      await updateMutation.mutateAsync({
+        id: editingOrg.id,
+        updates: {
+          nomGerant: data.nomGerant,
+          prenomGerant: data.prenomGerant,
+          emailGerant: data.emailGerant,
+          telephoneGerant: data.telephoneGerant,
+          dateDebutAbonnement: data.dateDebutAbonnement ? new Date(data.dateDebutAbonnement) : null,
+          dateFinAbonnement: data.dateFinAbonnement ? new Date(data.dateFinAbonnement) : null,
+          statutAbonnement: data.statutAbonnement,
+        },
+      });
+
+      // Mettre à jour les feature flags APRÈS la mise à jour de l'organisation
+      await apiRequest("PATCH", `/api/admin/organizations/${editingOrg.id}/settings`, {
+        enabledFeatures,
+      });
+
+      // Tout s'est bien passé : fermer le dialog et afficher le toast de succès
+      setEditingOrg(null);
+      toast({
+        title: "Succès",
+        description: "Organisation et fonctionnalités mises à jour avec succès",
+      });
+    } catch (error: any) {
+      // Gestion d'erreur détaillée
+      const errorMessage = error?.message || "Échec de la mise à jour";
+      toast({
+        title: "Erreur",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleFeature = (featureId: string) => {
+    setEnabledFeatures(prev => 
+      prev.includes(featureId)
+        ? prev.filter(id => id !== featureId)
+        : [...prev, featureId]
+    );
   };
 
   // Calculer les statistiques
@@ -421,6 +474,39 @@ export default function AdminOrganisations() {
                     </FormItem>
                   )}
                 />
+              </div>
+
+              <div className="border-t pt-4 mt-4">
+                <h3 className="font-medium mb-3">Fonctionnalités Activées</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Sélectionnez les fonctionnalités accessibles pour cette organisation
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {AVAILABLE_FEATURES.map((feature) => {
+                    const FeatureIcon = feature.icon;
+                    return (
+                      <div
+                        key={feature.id}
+                        className="flex items-center space-x-3 p-3 rounded-lg border hover-elevate"
+                        data-testid={`feature-${feature.id}`}
+                      >
+                        <Checkbox
+                          id={feature.id}
+                          checked={enabledFeatures.includes(feature.id)}
+                          onCheckedChange={() => toggleFeature(feature.id)}
+                          data-testid={`checkbox-${feature.id}`}
+                        />
+                        <label
+                          htmlFor={feature.id}
+                          className="flex items-center gap-2 cursor-pointer flex-1"
+                        >
+                          <FeatureIcon className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">{feature.label}</span>
+                        </label>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               <DialogFooter>

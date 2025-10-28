@@ -590,6 +590,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get organization settings (for feature flags)
+  app.get("/api/admin/organizations/:id/settings", isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    try {
+      let settings = await storage.getOrganizationSettings(req.params.id);
+      
+      // Si aucun settings n'existe, créer les defaults et les persister
+      if (!settings) {
+        const defaultFeatures = ['vehicles', 'drivers', 'clients', 'fuel', 'maintenance', 'treasury', 'invoices'];
+        settings = await storage.upsertOrganizationSettings({
+          organizationId: req.params.id,
+          enabledFeatures: defaultFeatures,
+        });
+      }
+      
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching organization settings:", error);
+      res.status(500).json({ message: "Failed to fetch organization settings" });
+    }
+  });
+
+  // Update organization settings (for feature flags)
+  app.patch("/api/admin/organizations/:id/settings", isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    try {
+      const { enabledFeatures } = req.body;
+      
+      // Validate enabledFeatures
+      const ALLOWED_FEATURES = ['vehicles', 'drivers', 'clients', 'fuel', 'maintenance', 'treasury', 'invoices'];
+      if (!Array.isArray(enabledFeatures)) {
+        return res.status(400).json({ message: "enabledFeatures doit être un tableau" });
+      }
+      
+      const invalidFeatures = enabledFeatures.filter(f => !ALLOWED_FEATURES.includes(f));
+      if (invalidFeatures.length > 0) {
+        return res.status(400).json({ message: `Fonctionnalités invalides: ${invalidFeatures.join(', ')}` });
+      }
+      
+      const settings = await storage.upsertOrganizationSettings({
+        organizationId: req.params.id,
+        enabledFeatures,
+      });
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating organization settings:", error);
+      res.status(500).json({ message: "Failed to update organization settings" });
+    }
+  });
+
   // Rate limiting for promotion attempts (IP-based to prevent email rotation bypass)
   const promotionAttempts = new Map<string, { count: number; firstAttempt: number }>();
   const MAX_ATTEMPTS = 5;
