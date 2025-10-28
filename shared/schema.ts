@@ -186,6 +186,19 @@ export const organizationSettings = pgTable("organization_settings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Invitations - Système d'invitation par email
+export const invitations = pgTable("invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id).notNull(),
+  email: text("email").notNull(),
+  token: text("token").notNull().unique(),
+  role: userRoleEnum("role").notNull().default("admin_entreprise"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdBy: varchar("created_by").references(() => users.id),
+});
+
 // Insert Schemas
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({ id: true, createdAt: true });
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
@@ -209,6 +222,9 @@ export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true,
   dateEcheance: z.union([z.string(), z.date()]).optional().nullable().transform(val => val ? new Date(val) : null),
 });
 export const insertOrganizationSettingsSchema = createInsertSchema(organizationSettings).omit({ id: true, updatedAt: true });
+export const insertInvitationSchema = createInsertSchema(invitations).omit({ id: true, createdAt: true, usedAt: true }).extend({
+  expiresAt: z.union([z.string(), z.date()]).transform(val => new Date(val)),
+});
 
 // Types
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
@@ -240,3 +256,6 @@ export type Invoice = typeof invoices.$inferSelect;
 
 export type InsertOrganizationSettings = z.infer<typeof insertOrganizationSettingsSchema>;
 export type OrganizationSettings = typeof organizationSettings.$inferSelect;
+
+export type InsertInvitation = z.infer<typeof insertInvitationSchema>;
+export type Invitation = typeof invitations.$inferSelect;
