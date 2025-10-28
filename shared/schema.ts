@@ -181,6 +181,8 @@ export const organizationSettings = pgTable("organization_settings", {
   logo: text("logo"), // URL ou base64
   couleurPrimaire: text("couleur_primaire").default("#2563eb"),
   couleurSecondaire: text("couleur_secondaire").default("#64748b"),
+  // Feature Flags - Fonctionnalités activables/désactivables
+  enabledFeatures: text("enabled_features").array().default(sql`ARRAY['vehicles', 'drivers', 'clients', 'fuel', 'maintenance', 'treasury', 'invoices']::text[]`).notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
